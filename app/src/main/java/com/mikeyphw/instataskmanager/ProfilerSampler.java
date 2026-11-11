@@ -23,7 +23,7 @@ import java.util.Locale;
 
 /** Only samples the current Instagram process and same-UID process inventory. */
 final class ProfilerSampler {
-    private static final int MAX_THREADS = 512;
+    private static final int MAX_THREADS = 320;
     private static final int MAX_LISTED_THREADS = 15;
     private static final long KB = 1024L;
     private static final long MB = KB * KB;
@@ -35,22 +35,25 @@ final class ProfilerSampler {
         HotThread(String name, double cpuPct) {
             this.name = name;
             this.cpuPct = cpuPct;
+            this.samplerCpuPct = samplerCpuPct;
             this.hint = ThreadStatParser.hint(name);
         }
     }
 
     static final class Snapshot {
-        final double cpuPct, inboundKbPerSec, outboundKbPerSec;
+        final double cpuPct, inboundKbPerSec, outboundKbPerSec, samplerCpuPct;
         final long pssKb, rssKb, javaUsedKb, nativeAllocatedKb;
         final int threads;
-        final long periodMillis;
+        final long periodMillis, threadPeriodMillis;
         final List<HotThread> topThreads;
         final String processes;
 
-        Snapshot(double cpuPct, double inbound, double outbound,
+        Snapshot(double cpuPct, double inbound, double outbound, double samplerCpuPct,
                  long pssKb, long rssKb, long javaUsedKb, long nativeAllocatedKb,
-                 int threads, long periodMillis, List<HotThread> topThreads, String processes) {
+                 int threads, long periodMillis, long threadPeriodMillis,
+                 List<HotThread> topThreads, String processes) {
             this.cpuPct = cpuPct;
+            this.samplerCpuPct = samplerCpuPct;
             this.inboundKbPerSec = inbound;
             this.outboundKbPerSec = outbound;
             this.pssKb = pssKb;
@@ -59,6 +62,7 @@ final class ProfilerSampler {
             this.nativeAllocatedKb = nativeAllocatedKb;
             this.threads = threads;
             this.periodMillis = periodMillis;
+            this.threadPeriodMillis = threadPeriodMillis;
             this.topThreads = Collections.unmodifiableList(new ArrayList<>(topThreads));
             this.processes = processes;
         }
@@ -69,6 +73,11 @@ final class ProfilerSampler {
     private long lastTimeMs = -1, lastProcessCpuMs = -1, lastRx = -1, lastTx = -1;
     private final long ticksPerSecond;
     private int sampleCounter;
+    private long lastThreadTimeMs = -1;
+    private List<HotThread> cachedThreads = Collections.emptyList();
+    private int cachedThreadCount = -1;
+    private long cachedPssKb = -1, cachedRssKb = -1, cachedJavaKb = -1, cachedNativeKb = -1;
+    private long lastThreadPeriodMs = -1;
     private String cachedProcesses = "Checking same-UID process list…";
 
     ProfilerSampler(Context context) {
@@ -80,6 +89,9 @@ final class ProfilerSampler {
     }
 
     Snapshot capture() {
+        // Measure this sampler thread's own CPU cost. The metric excludes UI
+        // drawing, and is explicitly an estimate, not total hook overhead.
+        long cpuStartNs = Debug.threadCpuTimeNanos();
         long now = SystemClock.elapsedRealtime();
         long cpuMs = Process.getElapsedCpuTime();
         long rx = TrafficStats.getUidRxBytes(Process.myUid());
@@ -88,7 +100,37 @@ final class ProfilerSampler {
         double cpu = percent(cpuMs, lastProcessCpuMs, period);
         double inbound = kbPerSecond(rx, lastRx, period);
         double outbound = kbPerSecond(tx, lastTx, period);
+        int index = sampleCounter++;
 
+        // Reading every /proc/self/task/*/stat and every process's PSS on
+        // every tick was expensive on Android 16. Most ticks do NOT do either.
+        if (SamplingCadence.threadScan(index)) captureThreads(now);
+        if (SamplingCadence.memoryScan(index)) {
+            Debug.MemoryInfo info = new Debug.MemoryInfo();
+            try { Debug.getMemoryInfo(info); cachedPssKb = info.getTotalPss(); }
+            catch (Throwable ignored) { cachedPssKb = -1; }
+            cachedJavaKb = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / KB;
+            cachedNativeKb = Debug.getNativeHeapAllocatedSize() / KB;
+            cachedRssKb = readRssKb();
+        }
+        if (SamplingCadence.processScan(index)) cachedProcesses = ownUidProcessList();
+
+        long cpuEndNs = Debug.threadCpuTimeNanos();
+        double samplerPct = (cpuStartNs < 0 || cpuEndNs < cpuStartNs || period <= 0)
+                ? Double.NaN : 100.0 * (cpuEndNs - cpuStartNs) / (period * 1000000.0);
+        lastTimeMs = now;
+        lastProcessCpuMs = cpuMs;
+        lastRx = rx;
+        lastTx = tx;
+        return new Snapshot(cpu, inbound, outbound, samplerPct,
+                cachedPssKb, cachedRssKb, cachedJavaKb, cachedNativeKb,
+                cachedThreadCount, period, lastThreadPeriodMs,
+                cachedThreads, cachedProcesses);
+    }
+
+    private void captureThreads(long now) {
+        long interval = lastThreadTimeMs < 0 ? -1 : now - lastThreadTimeMs;
+        lastThreadTimeMs = now;
         List<HotThread> hottest = new ArrayList<>();
         File[] rows = new File("/proc/self/task").listFiles();
         int count = 0;
@@ -97,13 +139,14 @@ final class ProfilerSampler {
             for (File row : rows) {
                 if (++count > MAX_THREADS) break;
                 int tid;
-                try { tid = Integer.parseInt(row.getName()); } catch (NumberFormatException bad) { continue; }
+                try { tid = Integer.parseInt(row.getName()); }
+                catch (NumberFormatException bad) { continue; }
                 long ticks = ThreadStatParser.cpuTicks(readFirstLine(new File(row, "stat")));
                 if (ticks < 0) continue;
                 current.put(tid, ticks);
                 Long previous = previousTicks.get(tid);
-                if (previous == null || ticksPerSecond <= 0 || period <= 0 || ticks < previous) continue;
-                double pct = 100.0 * (ticks - previous) * 1000.0 / (ticksPerSecond * (double) period);
+                if (previous == null || ticksPerSecond <= 0 || interval <= 0 || ticks < previous) continue;
+                double pct = 100.0 * (ticks - previous) * 1000.0 / (ticksPerSecond * (double) interval);
                 if (pct < .05 || !Double.isFinite(pct)) continue;
                 String threadName = readFirstLine(new File(row, "comm"));
                 if (threadName == null || threadName.isEmpty()) threadName = "tid-" + tid;
@@ -114,21 +157,9 @@ final class ProfilerSampler {
         previousTicks.putAll(current);
         hottest.sort((a,b) -> Double.compare(b.cpuPct, a.cpuPct));
         if (hottest.size() > MAX_LISTED_THREADS) hottest.subList(MAX_LISTED_THREADS, hottest.size()).clear();
-
-        Debug.MemoryInfo info = new Debug.MemoryInfo();
-        long pss = -1;
-        try { Debug.getMemoryInfo(info); pss = info.getTotalPss(); }
-        catch (Throwable ignored) { }
-        long javaUsed = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / KB;
-        long nativeUsed = Debug.getNativeHeapAllocatedSize() / KB;
-        long rss = readRssKb();
-
-        // Android Q+ allows memory inspection only for own UID, and it rate-limits queries.
-        // Do not use it for process-level CPU attribution, and do not poll every frame.
-        if (sampleCounter++ % 4 == 0) cachedProcesses = ownUidProcessList();
-        lastTimeMs = now; lastProcessCpuMs = cpuMs; lastRx = rx; lastTx = tx;
-        return new Snapshot(cpu, inbound, outbound, pss, rss, javaUsed, nativeUsed,
-                            current.size(), period, hottest, cachedProcesses);
+        cachedThreads = hottest;
+        cachedThreadCount = current.size();
+        lastThreadPeriodMs = interval;
     }
 
     private String ownUidProcessList() {

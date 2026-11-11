@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 3' in (ROOT/'app/build.gradle').read_text() and "versionName '0.3.0-p02-export'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 4' in (ROOT/'app/build.gradle').read_text() and "versionName '0.4.0-p03-low-overhead-social-requests'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -98,3 +98,38 @@ if len(sys.argv)>1:
         require(any(n.startswith('classes') and n.endswith('.dex') for n in z.namelist()), 'APK missing classes.dex')
     print('ITM_P00_HOSTED_APK_METADATA_PASS', hashlib.sha256(apk.read_bytes()).hexdigest())
 print('ITM_P00_SOCIAL_P01_SOURCE_PRIVACY_SCOPE_CONTRACT_PASS')
+
+# P03 low-overhead and user-controlled Social intents (all OFF by default).
+cadence = (SOURCE/'SamplingCadence.java').read_text()
+profiler = (SOURCE/'ProfilerSampler.java').read_text()
+requests = (SOURCE/'SocialFeatureSettings.java').read_text()
+native = (SOURCE/'NativeRepostRecovery.java').read_text()
+require('BASE_INTERVAL_MS = 5000' in cadence and 'THREAD_EVERY = 4' in cadence
+        and 'MEMORY_EVERY = 6' in cadence and 'PROCESSES_EVERY = 8' in cadence,
+        'P03 low-overhead cadence mismatch')
+require('SamplingCadence.threadScan(index)' in profiler and 'SamplingCadence.memoryScan(index)' in profiler
+        and 'SamplingCadence.processScan(index)' in profiler and 'Debug.threadCpuTimeNanos()' in profiler,
+        'P03 expensive sampler work is not gated or profiler cost is unmeasured')
+require('SamplingCadence.BASE_INTERVAL_MS' in panel and 's.samplerCpuPct' in panel,
+        'P03 UI must reflect overhead sampling')
+for key in ('repost_feed','repost_reels','liked_by','reposted_by','friendly_bubbles'):
+    require('"'+key+'"' in requests, 'Missing separate Social toggle '+key)
+require('getBoolean(key, false)' in requests and 'getSharedPreferences(PREFS' in requests,
+        'Social toggle defaults/persistence missing')
+require('socialExactVerified && !socialScanning' in panel and 'nativeRecovery.tryExisting(decor)' in panel,
+        'Unverified native view trial must be blocked')
+require('v.hasOnClickListeners()' in native and 'MAX_VISITED = 1200' in native
+        and 'state.view.get()' in native and 'view.setVisibility(state.visibility)' in native,
+        'Native view recovery must be bounded, native-only and reversible')
+for forbidden in ('performClick(', 'setOnClickListener(', 'startActivity(', 'setResult(', 'getInvoker(',
+                  'getMediaId(', 'getUserId(', 'getUsername(', 'getCaption(', 'URL', 'HttpURLConnection'):
+    require(forbidden not in native, 'P03 native view trial violation: '+forbidden)
+require('socialSwitches.addView(box)' in panel and 'SocialFeatureSettings.report(activity)' in panel,
+        'Social toggles or export integration missing')
+require('nativeRecovery.restore();' in panel, 'Cannot restore recovered native UI')
+require((ROOT/'scripts/p03-smoke.sh').is_file() and (ROOT/'scripts/P03CadenceSmoke.java').is_file()
+        and (ROOT/'scripts/P03NativeViewSmoke.java').is_file(),
+        'P03 sampler deterministic test missing')
+require('bash scripts/p03-smoke.sh' in (ROOT/'.github/workflows/android.yml').read_text(),
+        'P03 hosted Java smoke missing')
+print('ITM_P03_LOW_OVERHEAD_SOCIAL_INTENT_CONTRACT_PASS')

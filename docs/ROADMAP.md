@@ -67,3 +67,14 @@
 - Compare visible friend facepile counts to native source, never fabricate profiles.
 - Demonstrate native eligible Repost actions without breaking Like, Save, Share or feed.
 - Coexistence acceptance with InstaActions + InstaEclipse; no automatic publishing until accepted.
+
+## P03 LOW-OVERHEAD + SOCIAL REQUEST TOGGLES — implemented, runtime unqualified
+
+- 5s low-cost sample interval, /proc thread scans every ~20s, PSS every ~30s,
+  process inventory every ~40s. Estimated profiler sampler-thread CPU included.
+- Five independent persisted default-off Social feature requests.
+- Single manual best-effort native Repost View reveal with IG455 exact SHA + 9/9
+  scan guard, bounded view traversal, no repost/like action dispatch, reversible.
+- Friend-avatar toggles record user intent only; **not active hooks**. Exact data
+  and presentation suppression remain unverified.
+- Requires hosted CI and physical device qualification; no automatic merge.
