@@ -15,7 +15,7 @@ final class P04PredicateTrace {
     private static final int OUTCOMES = 4;  // TRUE, FALSE, NULL, OTHER
     private static final int MAX_FRAMES = 256;
     private static final String[] NAMES = {
-        "MobileConfig X.02ja Boolean (call ordinal)",
+        "HF05 MobileConfig X.0T4C Boolean (call ordinal)",
         "Config X.02ib nullable Boolean (call ordinal)",
         "Repost session check Boolean (call ordinal)"
     };
@@ -128,7 +128,9 @@ final class P04PredicateTrace {
                     }
             }
         }
-        out.append("Values remain unmodified. Different ordinals may reflect different branch paths, not identical checks.\n");
+        out.append("HF05: X.0T4C is a bytecode-verified concrete MobileConfig receiver.\n")
+           .append("A missing MobileConfig observation means NOT OBSERVED, never false.\n")
+           .append("Values remain unmodified. Different ordinals may reflect different branch paths, not identical checks.\n");
         return out.toString();
     }
 }

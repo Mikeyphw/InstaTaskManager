@@ -86,3 +86,17 @@ files and does not interact with Git remotes or the device.
 
 ## P04 HF04 early-branch input presence
 Read-only exact-IG455 A/B diagnostic correlating `A02/A0u` nullness with original Repost UI state, guarding public field shapes and exporting counts only. No account/media references or return-value mutation.
+
+
+## P04 HF05 — concrete MobileConfig target and install helper
+
+The prior `X.02ja.BdA(long)` target is replaced by bytecode-verified
+`X.0T4C.BdA(long)` (a concrete receiver implementing both the MobileConfig
+interface and `X.0mMk`, returned by the Repost branch factory). This is a
+passive observer; return values and account/session data are untouched.
+
+The self-executing overlay now has an `install-latest` command to download the
+newest **successful CI APK for the exact current PR head**, verify its SHA256,
+and cleanly uninstall the previous debug APK (if installed) before installing.
+The uninstall resets module preferences and Vector/LSPosed scope. The helper refuses
+if PR #3 has no successful build at its current SHA.

@@ -110,3 +110,23 @@ Read-only, exact-IG455, selector-4-local upstream Boolean instrumentation. Retir
 
 ## P04 HF04 · Repost early-branch input presence (diagnostic)
 Trace exact `X.0Ie0.A02 → X.07XN.A0u` null/present categories per cohort and returned variant, without reading content or modifying Instagram. Only if missing input differs identify why; do not manufacture repost UI payloads.
+
+
+## P04 HF05 — concrete MobileConfig dispatch target (read-only)
+
+- HF04 A/B ruled out the `A0u-null` early return: both accounts had `A0u-present`
+  on every sampled call, but A still returned singleton Repost UI state.
+- Exact IG455 APK SHA256 was reverified and DEX class hierarchy inspected.
+  `X.01ym.A02` returns `X.0mMk`. Concrete `X.0T4C` declares
+  `BdA(long):boolean` and implements `X.0mMk` plus
+  `MobileConfigUnsafeContext`; the previous `X.02ja` target does not match
+  that type path and produced no observations.
+- HF05 switches only the concrete MobileConfig observer. Original return
+  values are preserved, and account identifiers, keys, args and payloads
+  remain unobserved. Counters are correlated to original Repost states.
+- Qualification: on-device Account A/B recording must show whether the first
+  config Boolean differs; zero observations mean instrumentation mismatch,
+  not a false gate. Do not force eligibility until it is proven.
+- CI is single PR-triggered hosted Gradle; after success run the ZIP
+  `install-latest` action to install the artifact matching **current PR HEAD**.
+  The installer SHA-verifies before clean uninstall/install and reports scope reset.

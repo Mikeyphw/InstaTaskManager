@@ -42,7 +42,7 @@ public final class InstaTaskModule extends XposedModule {
             // Only Boolean presence categories, never account/media data.
             P04InputPresence input=P04InputPresence.preflight(loader);
             P04GateTrace.setInputPresence(input);
-            hook(mobile).setId("itm-p04-hf03-mobileconfig-boolean")
+            hook(mobile).setId("itm-p04-hf05-mobileconfig-dispatch")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
                     Object original=chain.proceed();

@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 9' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.3-p04-hf04-early-branch-presence'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 10' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.4-p04-hf05-mobileconfig-dispatch'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 9' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 10' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -224,8 +224,8 @@ require('class P04PredicateTrace' in predicate and 'ThreadLocal<Frame>' in predi
         and 'MAX_FRAMES = 256' in predicate and 'MAX_ORDINAL = 4' in predicate
         and 'ACTIVE.set(frame.parent)' in predicate, 'HF03 scoped bounded probe unavailable')
 require(all(token in trace for token in ('mobileConfigMethod','nullableConfigMethod','sessionCheckMethod',
-        'Class.forName("X.02ja",false,loader)', 'Class.forName("X.02ib",false,loader)',
-        'getDeclaredMethod("BdA",long.class)', 'getDeclaredMethod("D3r",int.class)',
+        'P04ConfigTarget.resolve(loader)', 'Class.forName("X.02ib",false,loader)',
+        'getDeclaredMethod("D3r",int.class)',
         'getDeclaredMethod("A04",session,String.class)', 'P04PredicateTrace.leave(frame,originalResult)')),
         'HF03 verified upstream signatures or enter/leave missing')
 require(all(token in module for token in ('hook(mobile)', 'hook(boxed)', 'hook(session)',
@@ -270,3 +270,26 @@ require('bash scripts/p04-hf04-smoke.sh' in workflow
         and (ROOT/'docs/P04_HF04_EARLY_BRANCH_PROVENANCE.md').is_file(),
         'HF04 hosted test or technical provenance missing')
 print('ITM_P04_HF04_EARLY_BRANCH_PRESENCE_PASS')
+
+# HF05: exact DEX-proven MobileConfig target, no inferred user/account state.
+config=(SOURCE/'P04ConfigTarget.java').read_text()
+require('Class.forName("X.0T4C",false,loader)' in config and
+        'Class.forName("com.facebook.mobileconfig.factory.MobileConfigUnsafeContext",false,loader)' in config and
+        'Class.forName("X.0mMk",false,loader)' in config and
+        '!config.isAssignableFrom(provider)' in config and
+        '!factory.isAssignableFrom(provider)' in config and
+        'getDeclaredMethod("BdA",long.class)' in config and
+        'Modifier.isAbstract(m)' in config and 'Modifier.isStatic(m)' in config,
+        'HF05 exact concrete MobileConfig dispatch contract missing')
+require('P04ConfigTarget.resolve(loader)' in trace and
+        'itm-p04-hf05-mobileconfig-dispatch' in module and
+        'HF05 MobileConfig X.0T4C Boolean' in predicate and
+        'HF05 config-dispatch A/B read-only' in trace,
+        'HF05 verified concrete getter not connected to passive frame')
+require('X.02ja' not in trace and 'X.02ja' not in module,
+        'HF05 old MobileConfig target remains installed')
+require('bash scripts/p04-hf05-smoke.sh' in workflow and
+        'python3 scripts/p04-hf05-install-contract.py' in workflow and
+        (ROOT/'docs/P04_HF05_CONFIG_DISPATCH.md').is_file(),
+        'HF05 CI smoke or trace provenance missing')
+print('ITM_P04_HF05_CONFIG_DISPATCH_SOURCE_PASS')
