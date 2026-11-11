@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 2' in (ROOT/'app/build.gradle').read_text() and "versionName '0.2.0-p00-social-p01'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 3' in (ROOT/'app/build.gradle').read_text() and "versionName '0.3.0-p02-export'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -62,6 +62,25 @@ for forbidden in ('setResult(', 'chain.proceed(', '.invoke(', 'hook(', 'getInvok
     require(forbidden not in social, 'Prohibited social-discovery operation: ' + forbidden)
 require('STRUCTURE_FOUND' in shape and 'AMBIGUOUS' in shape and 'getDeclaredMethods()' in shape, 'Structure gate not defined')
 
+# User-initiated P02 export must not change hooks, require storage permission,
+# collect account information or perform hidden network activity.
+export_ui = (SOURCE/'TaskPanel.java').read_text()
+export_file = (SOURCE/'ExportFile.java').read_text()
+export_report = (SOURCE/'ExportReport.java').read_text()
+require('exportButton=button("Export", this::exportDiagnostics)' in export_ui, 'Header export button missing')
+require('worker.post(() ->' in export_ui and 'ExportReport.build(' in export_ui and 'ExportFile.save(' in export_ui,
+        'Export not worker-backed or incomplete')
+require('MediaStore.Downloads.EXTERNAL_CONTENT_URI' in export_file and 'MediaStore.MediaColumns.IS_PENDING' in export_file,
+        'Scoped Downloads report publication missing')
+require('Intent.ACTION_SEND' in export_file and 'Build.VERSION.SDK_INT < Build.VERSION_CODES.Q' in export_file,
+        'Android 9 safe fallback missing')
+require('getBytes(StandardCharsets.UTF_8)' in export_file and 'resolver.delete(uri, null, null)' in export_file,
+        'Export UTF-8 or fail-closed cleanup missing')
+require('INSTA TASK MANAGER — LOCAL DIAGNOSTIC EXPORT' in export_report,
+        'Report provenance missing')
+for forbidden in ('getUserId(', 'getUsername(', 'getCaption(', 'queryMedia(', 'INTERNET', 'FileOutputStream(', 'setComponentEnabledSetting'):
+    require(forbidden not in export_ui + export_file + export_report,
+            'Unsafe exporter functionality: ' + forbidden)
 require('staticScope=true' in (META/'module.prop').read_text(), 'Static scope required')
 require('class TaskPanel' in all_source and 'decor.addView(panel,lp)' in all_source, 'Nonmodal in-app panel required')
 require((ROOT/'app/src/main/AndroidManifest.xml').is_file(), 'Missing Android manifest')
