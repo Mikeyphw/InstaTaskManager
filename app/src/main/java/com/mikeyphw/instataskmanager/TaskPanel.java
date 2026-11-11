@@ -41,6 +41,7 @@ final class TaskPanel {
     private final NativeRepostRecovery nativeRecovery = new NativeRepostRecovery();
     private boolean socialExactVerified;
     private String nativeTrial = "No manual native-view attempt yet.";
+    private String p04Action = "Capture disabled until P04 hook installation succeeds.";
     private HandlerThread thread;
     private Handler worker;
     private volatile boolean sampling;
@@ -131,6 +132,7 @@ final class TaskPanel {
 
     private void openPanel() {
         if (panel != null || activity.isFinishing() || activity.isDestroyed()) return;
+        InstaTaskModule.requestP04(activity); // background hash + guarded passive hooks
         panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(10), dp(9), dp(10), dp(8));
@@ -263,7 +265,7 @@ final class TaskPanel {
         final String socialAtExport = (socialScanning
                 ? "Scan currently running; no finished results available."
                 : socialReport) + "\n\n" + SocialFeatureSettings.report(activity)
-                + "\n" + nativeTrial;
+                + "\n" + nativeTrial + "\n\n" + P04GateTrace.report();
         final String overview = overviewText(captured);
         final String threads = threadsText(captured);
         exporting = true;
@@ -355,6 +357,8 @@ final class TaskPanel {
         if("components".equals(tab)) { content.setText(components==null?"Inspecting…":components); return; }
         if("social".equals(tab)) {
             content.setText("SOCIAL DISCOVERY — IG455\n\n" + socialReport + "\n\n" +
+                "P04 ACCOUNT A/B READ-ONLY TRACE\n" + p04Action + "\n" +
+                P04GateTrace.report() + "\n" +
                 "REQUESTED TOGGLES · EXPERIMENTAL\n" +
                 "These switches save your preference; they do not override server permission.\n" +
                 "Repost: after an exact scan, Try native Repost only reveals an EXISTING " +
@@ -445,10 +449,49 @@ final class TaskPanel {
             });
             socialSwitches.addView(box);
         }
+        TextView p04Title=txt("P04 · Compare full Instagram account A and B (no IDs)",11,true);
+        socialSwitches.addView(p04Title);
+        LinearLayout p04row=new LinearLayout(activity);
+        Button a=button("Start A",()->p04Start(0));
+        Button b=button("Start B",()->p04Start(1));
+        Button stop=button("Stop",()->{p04Action=P04GateTrace.stop();update();});
+        a.setEnabled(P04GateTrace.ready());
+        b.setEnabled(P04GateTrace.ready());
+        p04row.addView(a,new LinearLayout.LayoutParams(0,dp(42),1));
+        p04row.addView(b,new LinearLayout.LayoutParams(0,dp(42),1));
+        p04row.addView(stop,new LinearLayout.LayoutParams(0,dp(42),1));
+        socialSwitches.addView(p04row);
+        LinearLayout p04row2=new LinearLayout(activity);
+        Button inspect=button("Count UI labels",()->{
+            p04Action=P04GateTrace.countVisibleLabels(activity,panel,chip);update();
+        });
+        Button clear=button("Clear A/B",()->{p04Action=P04GateTrace.clear();update();});
+        p04row2.addView(inspect,new LinearLayout.LayoutParams(0,dp(42),1));
+        p04row2.addView(clear,new LinearLayout.LayoutParams(0,dp(42),1));
+        socialSwitches.addView(p04row2);
+        LinearLayout trialRow=new LinearLayout(activity);
+        Button trial=button("Try A Boolean gate",()->{p04Action=P04GateTrace.enableBooleanTrial();update();});
+        Button trialOff=button("Trial OFF",()->{p04Action=P04GateTrace.disableTrial();update();});
+        trialRow.addView(trial,new LinearLayout.LayoutParams(0,dp(42),1));
+        trialRow.addView(trialOff,new LinearLayout.LayoutParams(0,dp(42),1));
+        socialSwitches.addView(trialRow);
+        TextView p04Help=txt("Procedure: with the affected account, Start A, browse the same public " +
+                "Reel and feed post, then Stop. Switch accounts, Start B, repeat, Stop, Export. " +
+                "Count UI labels is optional; it checks exact words only and saves counts. " +
+                "Do not leave the wrong account capture active while switching. " +
+                "P04 only alters a result if a strict, 3+/3+ Boolean A/B difference is " +
+                "measured and you explicitly arm the session-only Try A Boolean gate. " +
+                "Never use it on an account other than manual A; Stop disarms it.",11,false);
+        socialSwitches.addView(p04Help);
         TextView status = txt("OFF by default. Avatar switches are requested-only; " +
                 "no avatar hooks are installed.\nManual Repost trials require a successful " +
                 "IG455 scan; no action is performed automatically.",11,false);
         socialSwitches.addView(status);
+    }
+
+    private void p04Start(int accountIndex) {
+        p04Action=P04GateTrace.begin(accountIndex);
+        update();
     }
 
     private void tryNativeRepost() {

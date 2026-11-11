@@ -25,7 +25,7 @@ require(props.get('staticScope') == 'true', 'Unexpected scope mode')
 entry = (SOURCE/'InstaTaskModule.java').read_text()
 require('com.instagram.android".equals(param.getPackageName())' in entry, 'No Instagram package guard')
 require('com.instagram.android".equals(processName)' in entry, 'No main-process guard')
-require(entry.count('chain.proceed()') == 2 and 'for (String name : new String[]{"onPause", "onDestroy"})' in entry, 'Lifecycle callback must call original exactly once per hook')
+require(entry.count('chain.proceed()') == 4 and 'for (String name : new String[]{"onPause", "onDestroy"})' in entry, 'Lifecycle callback must call original exactly once per hook')
 require('hook(resumed)' in entry and 'Activity.class.getDeclaredMethod(name)' in entry, 'Lifecycle interception missing')
 require('onPackageReady' in entry and 'onModuleLoaded' in entry, 'API 102 entry missing')
 require('io.github.libxposed:api:102.0.0' in (ROOT/'app/build.gradle').read_text(), 'Incorrect framework dependency')
@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 4' in (ROOT/'app/build.gradle').read_text() and "versionName '0.4.0-p03-low-overhead-social-requests'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 5' in (ROOT/'app/build.gradle').read_text() and "versionName '0.5.0-p04-account-ab-trace'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -133,3 +133,39 @@ require((ROOT/'scripts/p03-smoke.sh').is_file() and (ROOT/'scripts/P03CadenceSmo
 require('bash scripts/p03-smoke.sh' in (ROOT/'.github/workflows/android.yml').read_text(),
         'P03 hosted Java smoke missing')
 print('ITM_P03_LOW_OVERHEAD_SOCIAL_INTENT_CONTRACT_PASS')
+
+# P04 verified IG455 selector-aware passive A/B observation (NO action/eligibility override).
+trace=(SOURCE/'P04GateTrace.java').read_text()
+summary=(SOURCE/'P04TraceSummary.java').read_text()
+module=(SOURCE/'InstaTaskModule.java').read_text()
+panel=(SOURCE/'TaskPanel.java').read_text()
+require('versionCode 5' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
+        and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
+        'P04 exact installed APK pin absent')
+require('X.0Ie0' in trace and 'X.0F2B' in trace and 'getDeclaredField("$t")' in trace,
+        'P04 runtime selector shape validation missing')
+require('selector!=4' in trace and 'selector==11 || selector==12' in trace,
+        'P04 DEX-verified selector scope missing')
+require('chain.proceed()' in module and 'Object resultValue=chain.proceed()' in module,
+        'P04 original invocation missing')
+require(module.count('return resultValue;') == 2 and 'return P04GateTrace.noteUi(chain.getThisObject(),resultValue);' in module and 'P04GateTrace.verifyExactApk(context)' in module
+        and module.index('P04GateTrace.verifyExactApk(context)') < module.index('hook(ui)'),
+        'P04 original-value/guarded-trial/hash-before-hook contract broken')
+for disallowed in ('setResult(', 'getInvoker(', '.setAccessible(', 'performClick(', 'setVisibility(',
+                   'startActivity(', 'getUserId(', 'getUsername(', 'getCaption(', 'HttpURLConnection',
+                   'getSharedPreferences(', 'Runtime.getRuntime().exec', 'new URL('):
+    require(disallowed not in trace+summary, 'P04 read-only observation violated: '+disallowed)
+require('MAX_TRIAL_ALTERATIONS = 8' in trace and 'STATE.booleanGapReady()' in trace
+        and 'Boolean.FALSE.equals(result)' in trace and 'return Boolean.TRUE;' in trace
+        and 'booleanTrial=false' in trace and 'STATE.activeA()' in trace,
+        'P04 session-only scalar trial must require strict A/B evidence')
+require('result.getClass().getName()' in summary and 'LIMIT_PER_GATE = 256' in summary
+        and 'ACCOUNT ' in summary and 'trueValues' in summary and 'falseValues' in summary,
+        'P04 count-only bounded result classification missing')
+require('P04GateTrace.begin(' in panel and 'P04GateTrace.countVisibleLabels(' in panel
+        and 'P04GateTrace.report()' in panel and 'Start A' in panel and 'Start B' in panel,
+        'P04 A/B UX and export integration missing')
+require('bash scripts/p04-smoke.sh' in (ROOT/'.github/workflows/android.yml').read_text(),
+        'P04 full source javac gate missing from hosted CI')
+print('ITM_P04_EXACT_APK_PASSIVE_AB_CONTRACT_PASS')

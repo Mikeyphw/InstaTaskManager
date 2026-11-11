@@ -11,6 +11,52 @@ import io.github.libxposed.api.XposedInterface;
 public final class InstaTaskModule extends XposedModule {
     private final AtomicBoolean installed = new AtomicBoolean(false);
     private String processName;
+    private static volatile InstaTaskModule live;
+    private final AtomicBoolean p04Scheduled = new AtomicBoolean(false);
+
+    /** Begins only after the user opens the Task Manager panel. */
+    static void requestP04(Activity activity) {
+        InstaTaskModule module = live;
+        if (module == null || activity == null ||
+                !"com.instagram.android".equals(activity.getPackageName()) ||
+                !module.p04Scheduled.compareAndSet(false,true)) return;
+        final android.content.Context context=activity.getApplicationContext();
+        final ClassLoader loader=activity.getClassLoader();
+        Thread t=new Thread(() -> module.installP04(context,loader),"ITM-P04-verify");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private void installP04(android.content.Context context,ClassLoader loader) {
+        P04GateTrace.setStatus("VERIFYING exact IG455 APK (no hooks active)");
+        String result=P04GateTrace.verifyExactApk(context);
+        if (!"EXACT_APK_PASS".equals(result)) {P04GateTrace.setStatus(result);return;}
+        try {
+            // Verify BOTH exact structures before installing either hook.
+            Method ui=P04GateTrace.uiMethod(loader);
+            Method ufi=P04GateTrace.ufiMethod(loader);
+            hook(ui).setId("itm-p04-repost-ui-sel4")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object resultValue=chain.proceed(); // ORIGINAL exactly once
+                    try {return P04GateTrace.noteUi(chain.getThisObject(),resultValue);}
+                    catch (Throwable ignored) {return resultValue;}
+                });
+            hook(ufi).setId("itm-p04-repost-ufi-sel11-12")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object resultValue=chain.proceed(); // ORIGINAL exactly once
+                    try {P04GateTrace.noteUfi(chain.getThisObject(),resultValue);}
+                    catch (Throwable ignored) { }
+                    return resultValue;
+                });
+            P04GateTrace.installed();
+        } catch (Throwable t) {
+            P04GateTrace.setStatus("REFUSED: exact hook shape unavailable ("+
+                    t.getClass().getSimpleName()+")");
+        }
+    }
+
 
     public InstaTaskModule() { super(); }
 
@@ -55,6 +101,7 @@ public final class InstaTaskModule extends XposedModule {
                         }
                     });
             }
+            live=this;
             Log.i("ITM_P00", "INSTALLED main=1 lifecycle_only=1 actions=off");
         } catch (Throwable t) {
             Log.w("ITM_P00", "INSTALL_FAILED type=" + t.getClass().getSimpleName());

@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   host-source:
-    name: Source safety and deterministic metrics, Social P03
+    name: Source safety and deterministic metrics, Social P04
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
           bash scripts/social-shape-smoke.sh
           bash scripts/export-smoke.sh
           bash scripts/p03-smoke.sh
-          bash scripts/export-smoke.sh
+          bash scripts/p04-smoke.sh
 
   android:
     name: Compile API 102 module and validate APK
@@ -61,7 +61,7 @@ jobs:
           sha256sum app/build/outputs/apk/debug/app-debug.apk > app/build/outputs/apk/debug/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: InstaTaskManager-P03-Optimized-SocialToggle-debug-${{ github.sha }}
+          name: InstaTaskManager-P04-ABTrace-debug-${{ github.sha }}
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/SHA256SUMS

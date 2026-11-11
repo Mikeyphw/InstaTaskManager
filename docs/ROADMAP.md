@@ -78,3 +78,15 @@
 - Friend-avatar toggles record user intent only; **not active hooks**. Exact data
   and presentation suppression remain unverified.
 - Requires hosted CI and physical device qualification; no automatic merge.
+
+## P04 — IG455 account A/B gate trace and narrowly guarded scalar trial (2026-11-11)
+
+Status: LOCAL SOURCE + JAVA SMOKE; HOSTED CI AND PHYSICAL VALIDATION PENDING.
+Base: P03 HF01 commit `2423c2f76c8e55e914d24e9b2a829ee29da08fe4`.
+Stacked PR P04 must target P03 PR #2 branch; no merge or force-push.
+
+- In full Instagram 455, affected account misses Repost, Friends tab, and friend bubbles on multiple devices, but successfully reposts via Instagram Lite; another full-app account has features. This indicates account-by-client differences rather than universal repost backend rejection.
+- Exact APK hash/byte length + two DEX-verified multi-purpose method descriptors are checked before passive hooks. `$t=4` in `X.0Ie0.invoke()` corresponds to Repost UI-state/eligibility traces. `$t=11/12` in `X.0F2B.invoke(Object)` corresponds to Repost UFI traces. All three selectors are diagnostic candidates, not proven unique eligibility predicates.
+- Manual Account A/B captures count Boolean/null/object results without retaining identifiers, arguments, or result content. Transient label checks count only exact `Repost`/`Friends` words in visible native views, excluding the module panel; absence is not proof of absence in Litho or other rendering systems.
+- The only active trial requires >=3 pure Boolean `false` results on A and >=3 pure Boolean `true` results on B from exact selector 4, manual A selected, and a separate explicit user action. It can replace at most eight scalar `false` values in the running process. It is off on startup, Stop, switching cohorts, or Clear. It does not force any complex UI state or social-data lists.
+- Follow up only after exported A/B report: identify actual UI state field and Friends-tab/social-context data gate, then add verified, reversible presentation-only controls. Do not infer server eligibility or manufacture friend data.
