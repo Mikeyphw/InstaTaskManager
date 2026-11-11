@@ -107,3 +107,6 @@ Stacked PR P04 must target P03 PR #2 branch; no merge or force-push.
 
 ## P04 HF03 upstream primitive trace (2026-11-11)
 Read-only, exact-IG455, selector-4-local upstream Boolean instrumentation. Retired Boolean force-enable trial because A/B evidence is non-Boolean. Next: compare A/B guarded primitive call paths; only consider an explicitly reversible override after the actual failed predicate and its semantics are verified. CI remains PR-only for feature branches.
+
+## P04 HF04 · Repost early-branch input presence (diagnostic)
+Trace exact `X.0Ie0.A02 → X.07XN.A0u` null/present categories per cohort and returned variant, without reading content or modifying Instagram. Only if missing input differs identify why; do not manufacture repost UI payloads.

@@ -37,6 +37,7 @@ final class P04GateTrace {
     private static volatile String installStatus = "NOT REQUESTED (open Task Manager panel)";
     private static volatile boolean ready;
     private static Field uiSelector, ufiSelector;
+    private static volatile P04InputPresence inputPresence;
 
     private P04GateTrace() { }
     static String status() {return installStatus;}
@@ -113,11 +114,14 @@ final class P04GateTrace {
         if(m.getReturnType()!=boolean.class)throw new NoSuchMethodException("A04 result type");
         return m;
     }
-    static void installed() {ready=true;installStatus="READY: 5 passive IG455 hooks; upstream read-only";}
+    static void setInputPresence(P04InputPresence probe) {inputPresence=probe;}
+    static void installed() {ready=true;installStatus="READY: 5 passive IG455 hooks; early-branch A/B read-only";}
     static P04PredicateTrace.Frame enterUi(Object instance) {
         if(!ready || !STATE.recording() || uiSelector==null || instance==null)return null;
         try {if(uiSelector.getInt(instance)!=4)return null;
-             return P04PredicateTrace.enter(STATE.activeIndex());}
+             P04InputPresence probe=inputPresence;
+             int presence=probe==null?P04InputPresence.UNAVAILABLE:probe.classify(instance);
+             return P04PredicateTrace.enter(STATE.activeIndex(),presence);}
         catch(Throwable ignored){return null;}
     }
     static void leaveUi(P04PredicateTrace.Frame frame,Object originalResult) {

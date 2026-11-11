@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 8' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.2-p04-hf03-upstream-predicates'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 9' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.3-p04-hf04-early-branch-presence'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 8' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 9' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -245,3 +245,28 @@ require('bash scripts/p04-hf03-smoke.sh' in workflow
         and (ROOT/'docs/P04_HF03_UPSTREAM_PREDICATES.md').is_file(),
         'HF03 hosted regression or provenance missing')
 print('ITM_P04_HF03_UPSTREAM_READ_ONLY_PREDICATES_PASS')
+
+# HF04: read-only exact-DEX early-branch provenance, never account/media data.
+presence=(SOURCE/'P04InputPresence.java').read_text()
+trace=(SOURCE/'P04GateTrace.java').read_text()
+module=(SOURCE/'InstaTaskModule.java').read_text()
+predicate=(SOURCE/'P04PredicateTrace.java').read_text()
+require(all(x in presence for x in ('X.0Ie0','X.07XN','X.00w8','getDeclaredField("A02")',
+        'getDeclaredField("A0u")','Modifier.isPublic','nested.get(model)==null',
+        'A02-null','A0u-null','A0u-present','UNAVAILABLE')),
+        'HF04 exact input-presence shape or safe categories missing')
+require('P04InputPresence.preflight(loader)' in module and 'P04GateTrace.setInputPresence(input)' in module
+        and module.index('P04InputPresence.preflight(loader)') < module.index('hook(mobile)'),
+        'HF04 input shape must verify before any hook installation')
+require('P04PredicateTrace.enter(STATE.activeIndex(),presence)' in trace
+        and 'INPUT_COUNTS[frame.cohort][state][frame.inputPresence]++' in predicate
+        and 'HF04 early-branch input presence:' in predicate,
+        'HF04 read-only per-state input counters missing')
+for forbidden in ('setAccessible(', 'getUserId(', 'getUsername(', 'getCaption(', 'getArgs()',
+                  'performClick(', '.setVisibility(', 'return Boolean.TRUE;', 'new URL('):
+    require(forbidden not in presence, 'HF04 input probe unsafe: '+forbidden)
+require('bash scripts/p04-hf04-smoke.sh' in workflow
+        and (ROOT/'scripts/P04HF04InputSmoke.java').is_file()
+        and (ROOT/'docs/P04_HF04_EARLY_BRANCH_PROVENANCE.md').is_file(),
+        'HF04 hosted test or technical provenance missing')
+print('ITM_P04_HF04_EARLY_BRANCH_PRESENCE_PASS')

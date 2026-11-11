@@ -83,3 +83,6 @@ branch and server payload behavior can be tested safely. Set InstaEclipse's
 The single consolidated bootstrap ZIP supports fresh installation and an
 **exact-original-P00** project upgrade; it refuses to clobber modified P00
 files and does not interact with Git remotes or the device.
+
+## P04 HF04 early-branch input presence
+Read-only exact-IG455 A/B diagnostic correlating `A02/A0u` nullness with original Repost UI state, guarding public field shapes and exporting counts only. No account/media references or return-value mutation.

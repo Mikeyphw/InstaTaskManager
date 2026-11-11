@@ -22,25 +22,31 @@ final class P04PredicateTrace {
     // Counters for A/B, outer state singleton/payload/other, getter, ordinal, outcome
     private static final int[][][][][] COUNTS = new int[2][3][SOURCES][MAX_ORDINAL][OUTCOMES];
     private static final int[][] FRAME_COUNTS = new int[2][3];
+    // A/B cohort, observed return state, and early-branch input presence only.
+    private static final int[][][] INPUT_COUNTS = new int[2][3][4];
     private static final int[][] DROPPED_FRAMES = new int[2][3];
     private static final ThreadLocal<Frame> ACTIVE = new ThreadLocal<>();
     private P04PredicateTrace() { }
 
     static final class Frame {
         final int cohort;
+        final int inputPresence;
         final Frame parent;
         final int[][] values = new int[SOURCES][MAX_ORDINAL];
         final int[] next = new int[SOURCES];
-        Frame(int cohort, Frame parent) {
+        Frame(int cohort, Frame parent, int inputPresence) {
             this.cohort=cohort;
             this.parent=parent;
+            this.inputPresence=inputPresence;
             for(int i=0;i<SOURCES;i++)java.util.Arrays.fill(values[i],-1);
         }
     }
 
-    static Frame enter(int cohort) {
+    static Frame enter(int cohort) {return enter(cohort,P04InputPresence.UNAVAILABLE);}
+    static Frame enter(int cohort,int presence) {
         if(cohort!=0 && cohort!=1)return null;
-        Frame frame=new Frame(cohort,ACTIVE.get());
+        if(presence<0 || presence>=4)presence=P04InputPresence.UNAVAILABLE;
+        Frame frame=new Frame(cohort,ACTIVE.get(),presence);
         ACTIVE.set(frame);
         return frame;
     }
@@ -64,6 +70,7 @@ final class P04PredicateTrace {
         synchronized(P04PredicateTrace.class){
             if(FRAME_COUNTS[frame.cohort][state]>=MAX_FRAMES){DROPPED_FRAMES[frame.cohort][state]++;return;}
             FRAME_COUNTS[frame.cohort][state]++;
+            INPUT_COUNTS[frame.cohort][state][frame.inputPresence]++;
             for(int source=0;source<SOURCES;source++)
                 for(int ordinal=0;ordinal<MAX_ORDINAL;ordinal++){
                     int value=frame.values[source][ordinal];
@@ -84,6 +91,7 @@ final class P04PredicateTrace {
         for(int a=0;a<2;a++)for(int s=0;s<3;s++){
             FRAME_COUNTS[a][s]=0;
             DROPPED_FRAMES[a][s]=0;
+            java.util.Arrays.fill(INPUT_COUNTS[a][s],0);
             for(int gate=0;gate<SOURCES;gate++)
                 for(int ordinal=0;ordinal<MAX_ORDINAL;ordinal++)
                     java.util.Arrays.fill(COUNTS[a][s][gate][ordinal],0);
@@ -101,6 +109,12 @@ final class P04PredicateTrace {
                 if(frames==0 && dropped==0)continue;
                 out.append("  outer state ").append(variant==0?"singleton":variant==1?"payload":"other")
                    .append(" frames=").append(frames).append(" capped_extra=").append(dropped).append('\n');
+                out.append("   HF04 early-branch input presence: ");
+                for(int k=0;k<4;k++){
+                    if(k>0)out.append(" ");
+                    out.append(P04InputPresence.LABELS[k]).append("=").append(INPUT_COUNTS[account][variant][k]);
+                }
+                out.append('\n');
                 for(int source=0;source<SOURCES;source++)
                     for(int ordinal=0;ordinal<MAX_ORDINAL;ordinal++){
                         int[] values=COUNTS[account][variant][source][ordinal];
