@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /** A nonmodal, draggable in-app performance panel. Sampling exists ONLY while open. */
 final class TaskPanel {
@@ -33,6 +34,8 @@ final class TaskPanel {
     private final Activity activity;
     private final ViewGroup decor;
     private TextView chip, content;
+    private Button exportButton;
+    private volatile boolean exporting;
     private LinearLayout panel, controlsBar;
     private HandlerThread thread;
     private Handler worker;
@@ -142,6 +145,9 @@ final class TaskPanel {
         LinearLayout.LayoutParams titleLp=new LinearLayout.LayoutParams(0,dp(40),1);
         heading.setGravity(Gravity.CENTER_VERTICAL);
         header.addView(heading,titleLp);
+        exportButton=button("Export", this::exportDiagnostics);
+        exportButton.setContentDescription("Export Task Manager diagnostics to Downloads");
+        header.addView(exportButton,new LinearLayout.LayoutParams(dp(72),dp(40)));
         Button close=button("×",()->closePanel());
         header.addView(close,new LinearLayout.LayoutParams(dp(45),dp(40)));
         panel.addView(header);
@@ -235,6 +241,42 @@ final class TaskPanel {
         });
     }
 
+    /** A single explicit click saves the latest known readings; no background uploads. */
+    private void exportDiagnostics() {
+        if (exporting || !sampling || panel == null || worker == null) return;
+        final long time = System.currentTimeMillis();
+        final ProfilerSampler.Snapshot captured = snapshot;
+        final String tabAtExport = tab;
+        final String partsAtExport = components;
+        final String socialAtExport = socialScanning
+                ? "Scan currently running; no finished results available."
+                : socialReport;
+        final String overview = overviewText(captured);
+        final String threads = threadsText(captured);
+        exporting = true;
+        if (exportButton != null) exportButton.setEnabled(false);
+        final android.content.Context app = activity.getApplicationContext();
+        worker.post(() -> {
+            String location = null;
+            try {
+                String report = ExportReport.build(time, tabAtExport, overview,
+                        threads, partsAtExport, socialAtExport);
+                location = ExportFile.save(app, time, report);
+            } catch (Throwable ignored) {
+                // Fail closed; exception messages, file paths and other private data
+                // must never be included in UI or shared logs.
+            }
+            final String success = location;
+            MAIN.post(() -> {
+                exporting = false;
+                if (exportButton != null) exportButton.setEnabled(true);
+                Toast.makeText(app, success != null
+                        ? "SUCCESS: " + success
+                        : "FAILURE: Could not export report to Downloads", Toast.LENGTH_LONG).show();
+            });
+        });
+    }
+
     private void startSampler() {
         if (sampling) return;
         sampling=true;
@@ -310,41 +352,48 @@ final class TaskPanel {
                 "The TM chip can be hidden until the Instagram process restarts.");
             return;
         }
-        ProfilerSampler.Snapshot s=snapshot;
-        if(s==null){content.setText("Waiting for first sample…");return;}
+        if("overview".equals(tab)) content.setText(overviewText(snapshot));
+        else content.setText(threadsText(snapshot));
+    }
+
+    private static String overviewText(ProfilerSampler.Snapshot s) {
+        if(s==null) return "Waiting for first sample…";
+        return new StringBuilder()
+            .append("INSTAGRAM MAIN PROCESS\n")
+            .append("CPU: ").append(ProfilerSampler.format(s.cpuPct)).append("% of one core\n")
+            .append("PSS: ").append(ProfilerSampler.mem(s.pssKb)).append("\n")
+            .append("RSS: ").append(ProfilerSampler.mem(s.rssKb)).append("\n")
+            .append("Java heap used: ").append(ProfilerSampler.mem(s.javaUsedKb)).append("\n")
+            .append("Native heap allocated: ").append(ProfilerSampler.mem(s.nativeAllocatedKb)).append("\n")
+            .append("Active threads: ").append(s.threads).append("\n")
+            .append("UID network download: ").append(ProfilerSampler.format(s.inboundKbPerSec)).append(" KiB/s\n")
+            .append("UID network upload: ").append(ProfilerSampler.format(s.outboundKbPerSec)).append(" KiB/s\n\n")
+            .append("SAME-UID PROCESSES (if exposed):\n").append(s.processes).append("\n")
+            .append("The UID network totals may include other Instagram processes.\n")
+            .append("PSS/RSS are process totals, not per-feature memory estimates.\n")
+            .append("The profiler itself adds small overhead.\n\n")
+            .append("Live sampling: 2.5 s; only with panel open.\n")
+            .toString();
+    }
+
+    private static String threadsText(ProfilerSampler.Snapshot s) {
+        if(s==null) return "Waiting for first sample…";
         StringBuilder b=new StringBuilder();
-        if("overview".equals(tab)){
-            b.append("INSTAGRAM MAIN PROCESS\n")
-             .append("CPU: ").append(ProfilerSampler.format(s.cpuPct)).append("% of one core\n")
-             .append("PSS: ").append(ProfilerSampler.mem(s.pssKb)).append("\n")
-             .append("RSS: ").append(ProfilerSampler.mem(s.rssKb)).append("\n")
-             .append("Java heap used: ").append(ProfilerSampler.mem(s.javaUsedKb)).append("\n")
-             .append("Native heap allocated: ").append(ProfilerSampler.mem(s.nativeAllocatedKb)).append("\n")
-             .append("Active threads: ").append(s.threads).append("\n")
-             .append("UID network download: ").append(ProfilerSampler.format(s.inboundKbPerSec)).append(" KiB/s\n")
-             .append("UID network upload: ").append(ProfilerSampler.format(s.outboundKbPerSec)).append(" KiB/s\n\n")
-             .append("SAME-UID PROCESSES (if exposed):\n").append(s.processes).append("\n")
-             .append("The UID network totals may include other Instagram processes.\n")
-             .append("PSS/RSS are process totals, not per-feature memory estimates.\n")
-             .append("The profiler itself adds small overhead.\n\n")
-             .append("Live sampling: 2.5 s; only with panel open.\n");
-        } else {
-            b.append("BUSIEST THREADS — current Instagram process\n")
-             .append("CPU is per-thread delta since last sample (one core=100%).\n")
-             .append("Labels ending with ? are ONLY name heuristics.\n\n");
-            for(ProfilerSampler.HotThread t:s.topThreads){
-                b.append(ProfilerSampler.format(t.cpuPct)).append("%  ")
-                 .append(t.name).append("\n      ").append(t.hint).append("\n");
-            }
-            if(s.topThreads.isEmpty()) b.append("No active threads identified, or first sample.\n");
-            b.append("\nThread names do NOT identify individual Instagram features with certainty.\n");
+        b.append("BUSIEST THREADS — current Instagram process\n")
+         .append("CPU is per-thread delta since last sample (one core=100%).\n")
+         .append("Labels ending with ? are ONLY name heuristics.\n\n");
+        for(ProfilerSampler.HotThread t:s.topThreads){
+            b.append(ProfilerSampler.format(t.cpuPct)).append("%  ")
+             .append(t.name).append("\n      ").append(t.hint).append("\n");
         }
-        content.setText(b.toString());
+        if(s.topThreads.isEmpty()) b.append("No active threads identified, or first sample.\n");
+        b.append("\nThread names do NOT identify individual Instagram features with certainty.\n");
+        return b.toString();
     }
 
     private void closePanel() {
         stopSampler();
-        if(panel!=null){decor.removeView(panel);panel=null;content=null;controlsBar=null;}
+        if(panel!=null){decor.removeView(panel);panel=null;content=null;controlsBar=null;exportButton=null;}
         if(chip!=null) chip.setVisibility(View.VISIBLE);
     }
 

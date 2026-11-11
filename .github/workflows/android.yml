@@ -26,6 +26,7 @@ jobs:
         run: |
           bash scripts/javac-smoke.sh
           bash scripts/social-shape-smoke.sh
+          bash scripts/export-smoke.sh
 
   android:
     name: Compile API 102 module and validate APK
@@ -58,7 +59,7 @@ jobs:
           sha256sum app/build/outputs/apk/debug/app-debug.apk > app/build/outputs/apk/debug/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: InstaTaskManager-P00-SocialP01-debug-${{ github.sha }}
+          name: InstaTaskManager-P02-Export-debug-${{ github.sha }}
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/SHA256SUMS
