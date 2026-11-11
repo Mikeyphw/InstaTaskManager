@@ -16,6 +16,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -36,7 +37,10 @@ final class TaskPanel {
     private TextView chip, content;
     private Button exportButton;
     private volatile boolean exporting;
-    private LinearLayout panel, controlsBar;
+    private LinearLayout panel, controlsBar, scrollBody, socialSwitches;
+    private final NativeRepostRecovery nativeRecovery = new NativeRepostRecovery();
+    private boolean socialExactVerified;
+    private String nativeTrial = "No manual native-view attempt yet.";
     private HandlerThread thread;
     private Handler worker;
     private volatile boolean sampling;
@@ -184,7 +188,13 @@ final class TaskPanel {
         content = txt("Collecting measurements…",12,false);
         content.setTypeface(Typeface.MONOSPACE);
         content.setPadding(dp(4),dp(9),dp(4),dp(12));
-        scroll.addView(content);
+        scrollBody = new LinearLayout(activity);
+        scrollBody.setOrientation(LinearLayout.VERTICAL);
+        socialSwitches = new LinearLayout(activity);
+        socialSwitches.setOrientation(LinearLayout.VERTICAL);
+        scrollBody.addView(socialSwitches);
+        scrollBody.addView(content);
+        scroll.addView(scrollBody);
         panel.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         controlsBar = new LinearLayout(activity);
         controlsBar.setGravity(Gravity.CENTER);
@@ -234,6 +244,8 @@ final class TaskPanel {
             MAIN.post(() -> {
                 socialScanning = false;
                 if (panel != null && sampling) {
+                    socialExactVerified = display.contains("EXACT IG455 APK SHA256 + size: MATCH")
+                            && display.contains("Matched structures: 9 / 9 | ambiguous: 0 | unavailable: 0");
                     socialReport = display;
                     if ("social".equals(tab)) update();
                 }
@@ -248,9 +260,10 @@ final class TaskPanel {
         final ProfilerSampler.Snapshot captured = snapshot;
         final String tabAtExport = tab;
         final String partsAtExport = components;
-        final String socialAtExport = socialScanning
+        final String socialAtExport = (socialScanning
                 ? "Scan currently running; no finished results available."
-                : socialReport;
+                : socialReport) + "\n\n" + SocialFeatureSettings.report(activity)
+                + "\n" + nativeTrial;
         final String overview = overviewText(captured);
         final String threads = threadsText(captured);
         exporting = true;
@@ -293,7 +306,7 @@ final class TaskPanel {
             } catch (Throwable err) {
                 MAIN.post(()->{ if(sampling && content!=null) content.setText("Sampling unavailable for this process."); });
             }
-            if(sampling && worker!=null) worker.postDelayed(task[0],2500);
+            if(sampling && worker!=null) worker.postDelayed(task[0],SamplingCadence.BASE_INTERVAL_MS);
         };
         worker.post(task[0]);
     }
@@ -308,12 +321,21 @@ final class TaskPanel {
 
     private void update() {
         if(content==null) return;
+        if (socialSwitches != null) {
+            socialSwitches.setVisibility("social".equals(tab) ? View.VISIBLE : View.GONE);
+            if ("social".equals(tab)) buildSocialSwitches();
+        }
         if(controlsBar != null) {
             controlsBar.removeAllViews();
             if ("social".equals(tab)) {
                 Button scan = button("Scan IG455 (read-only)", this::scanSocial);
                 scan.setEnabled(!socialScanning);
-                controlsBar.addView(scan,new LinearLayout.LayoutParams(-1,dp(46)));
+                controlsBar.addView(scan,new LinearLayout.LayoutParams(0,dp(46),1));
+                Button trial = button("Try native Repost", this::tryNativeRepost);
+                trial.setEnabled(socialExactVerified && !socialScanning &&
+                        (SocialFeatureSettings.get(activity,"repost_feed") ||
+                         SocialFeatureSettings.get(activity,"repost_reels")));
+                controlsBar.addView(trial,new LinearLayout.LayoutParams(0,dp(46),1));
             }
             if ("controls".equals(tab)) {
                 Button settings=button("Android app settings", () -> {
@@ -333,9 +355,13 @@ final class TaskPanel {
         if("components".equals(tab)) { content.setText(components==null?"Inspecting…":components); return; }
         if("social".equals(tab)) {
             content.setText("SOCIAL DISCOVERY — IG455\n\n" + socialReport + "\n\n" +
-                "Repost/facepile overrides remain disabled. This scan cannot prove " +
-                "server permission or availability of friends' data.\n" +
-                "Use dedicated future verification before enabling UI controls.");
+                "REQUESTED TOGGLES · EXPERIMENTAL\n" +
+                "These switches save your preference; they do not override server permission.\n" +
+                "Repost: after an exact scan, Try native Repost only reveals an EXISTING " +
+                "hidden clickable native View labelled Repost. Most Instagram views may not qualify.\n" +
+                "Friend avatars: no verified safe native presentation gate, so requests are " +
+                "PENDING and do NOT yet alter Instagram.\n" + nativeTrial + "\n\n" +
+                "Disable repost in InstaEclipse must be OFF. No synthetic repost/like data.");
             return;
         }
         if("controls".equals(tab)) {
@@ -343,7 +369,8 @@ final class TaskPanel {
                 "Measurement runs only while this panel is open.\n"+
                 "Close the panel to stop sampling and release its worker thread.\n\n"+
                 "Optional Instagram components: NO VERIFIED SWITCHES YET.\n"+
-                "Social features: use the Social tab for a read-only Instagram 455 audit.\n"+
+                "Social features: the Social tab contains requested-only experimental toggles " +
+                "and a guarded, manual native Repost View trial.\n"+
                 "Disabling services, providers, activities or receivers without an APK-specific " +
                 "dependency audit could break login, DM and playback.\n\n"+
                 "For reversible device-wide background restrictions, open Instagram's system app settings.\n"+
@@ -365,14 +392,16 @@ final class TaskPanel {
             .append("RSS: ").append(ProfilerSampler.mem(s.rssKb)).append("\n")
             .append("Java heap used: ").append(ProfilerSampler.mem(s.javaUsedKb)).append("\n")
             .append("Native heap allocated: ").append(ProfilerSampler.mem(s.nativeAllocatedKb)).append("\n")
-            .append("Active threads: ").append(s.threads).append("\n")
+            .append("Active threads (last scan): ").append(s.threads >= 0 ? s.threads : "pending").append("\n")
+            .append("Profiler sampler CPU estimate: ").append(ProfilerSampler.format(s.samplerCpuPct))
+            .append("% of one core (sample thread only)\n")
             .append("UID network download: ").append(ProfilerSampler.format(s.inboundKbPerSec)).append(" KiB/s\n")
             .append("UID network upload: ").append(ProfilerSampler.format(s.outboundKbPerSec)).append(" KiB/s\n\n")
             .append("SAME-UID PROCESSES (if exposed):\n").append(s.processes).append("\n")
             .append("The UID network totals may include other Instagram processes.\n")
             .append("PSS/RSS are process totals, not per-feature memory estimates.\n")
-            .append("The profiler itself adds small overhead.\n\n")
-            .append("Live sampling: 2.5 s; only with panel open.\n")
+            .append("The profiler adds overhead; this sampler-thread estimate excludes UI/hook costs.\n\n")
+            .append("CPU/network every 5 s; threads ~20 s; memory ~30 s; processes ~40 s.\n")
             .toString();
     }
 
@@ -381,7 +410,10 @@ final class TaskPanel {
         StringBuilder b=new StringBuilder();
         b.append("BUSIEST THREADS — current Instagram process\n")
          .append("CPU is per-thread delta since last sample (one core=100%).\n")
-         .append("Labels ending with ? are ONLY name heuristics.\n\n");
+         .append("Labels ending with ? are ONLY name heuristics.\n")
+         .append("Thread CPU averages the last scan window, ~20 s (first scan is baseline).\n")
+         .append("Scan window: ").append(s.threadPeriodMillis > 0 ?
+                s.threadPeriodMillis + " ms" : "pending").append("\n\n");
         for(ProfilerSampler.HotThread t:s.topThreads){
             b.append(ProfilerSampler.format(t.cpuPct)).append("%  ")
              .append(t.name).append("\n      ").append(t.hint).append("\n");
@@ -391,13 +423,56 @@ final class TaskPanel {
         return b.toString();
     }
 
+    private void buildSocialSwitches() {
+        if (socialSwitches == null) return;
+        socialSwitches.removeAllViews();
+        for (int i=0; i<SocialFeatureSettings.KEYS.length;i++) {
+            final String key = SocialFeatureSettings.KEYS[i];
+            CheckBox box = new CheckBox(activity);
+            box.setText(SocialFeatureSettings.LABELS[i] + " (experimental)");
+            box.setTextColor(FOREGROUND);
+            box.setTextSize(12);
+            box.setChecked(SocialFeatureSettings.get(activity, key));
+            box.setOnCheckedChangeListener((buttonView,checked) -> {
+                if (!SocialFeatureSettings.put(activity, key, checked)) {
+                    buttonView.setOnCheckedChangeListener(null);
+                    buttonView.setChecked(!checked);
+                    Toast.makeText(activity, "Could not save Social setting", Toast.LENGTH_SHORT).show();
+                }
+                // Turning OFF restores any native visibility manually recovered.
+                if (!checked && (key.startsWith("repost_"))) nativeRecovery.restore();
+                if (panel != null && "social".equals(tab)) update();
+            });
+            socialSwitches.addView(box);
+        }
+        TextView status = txt("OFF by default. Avatar switches are requested-only; " +
+                "no avatar hooks are installed.\nManual Repost trials require a successful " +
+                "IG455 scan; no action is performed automatically.",11,false);
+        socialSwitches.addView(status);
+    }
+
+    private void tryNativeRepost() {
+        if (!socialExactVerified || socialScanning ||
+            (!SocialFeatureSettings.get(activity,"repost_feed") &&
+             !SocialFeatureSettings.get(activity,"repost_reels"))) {
+            nativeTrial = "REFUSED: Exact IG455 scan + at least one Repost request required.";
+        } else {
+            // This is a single user-triggered, bounded visibility-only trial.
+            // No method invocation or network request occurs.
+            nativeTrial = nativeRecovery.tryExisting(decor);
+        }
+        update();
+    }
+
     private void closePanel() {
         stopSampler();
-        if(panel!=null){decor.removeView(panel);panel=null;content=null;controlsBar=null;exportButton=null;}
+        socialExactVerified = false;
+        if(panel!=null){decor.removeView(panel);panel=null;content=null;controlsBar=null;exportButton=null;socialSwitches=null;scrollBody=null;}
         if(chip!=null) chip.setVisibility(View.VISIBLE);
     }
 
     private void dispose() {
+        nativeRecovery.restore();
         closePanel();
         if(chip!=null){decor.removeView(chip);chip=null;}
     }
