@@ -35,7 +35,6 @@ final class ProfilerSampler {
         HotThread(String name, double cpuPct) {
             this.name = name;
             this.cpuPct = cpuPct;
-            this.samplerCpuPct = samplerCpuPct;
             this.hint = ThreadStatParser.hint(name);
         }
     }

@@ -15,3 +15,15 @@ javac -encoding UTF-8 -d "$build" \
  app/src/main/java/com/mikeyphw/instataskmanager/NativeRepostRecovery.java \
  scripts/P03NativeViewSmoke.java
 java -cp "$build" com.mikeyphw.instataskmanager.P03NativeViewSmoke
+
+# HF01: javac MUST typecheck the entire Android-backed ProfilerSampler. The tiny
+# android stubs live only under scripts/ and never enter the release APK.
+# This prevents a stray member assignment (HotThread vs Snapshot) from
+# passing the source-only gates and failing :app:compileDebugJavaWithJavac.
+javac -encoding UTF-8 -d "$build" \
+ -sourcepath "scripts/p03-android-stubs" \
+ app/src/main/java/com/mikeyphw/instataskmanager/ThreadStatParser.java \
+ app/src/main/java/com/mikeyphw/instataskmanager/SamplingCadence.java \
+ app/src/main/java/com/mikeyphw/instataskmanager/ProfilerSampler.java \
+ scripts/P03ProfilerCompileSmoke.java
+java -cp "$build" com.mikeyphw.instataskmanager.P03ProfilerCompileSmoke
