@@ -100,3 +100,8 @@ newest **successful CI APK for the exact current PR head**, verify its SHA256,
 and cleanly uninstall the previous debug APK (if installed) before installing.
 The uninstall resets module preferences and Vector/LSPosed scope. The helper refuses
 if PR #3 has no successful build at its current SHA.
+
+
+### P04 HF06 — Start buttons repair
+
+Repairs the HF05 false NoSuchMethodException on IG455 abstract owner `X.0T4C` with a concrete `BdA(J)Z` method; optional upstream observers now fail independently of the two core A/B trace hooks. See `docs/P04_HF06_START_CONTROLS_REPAIR.md`.

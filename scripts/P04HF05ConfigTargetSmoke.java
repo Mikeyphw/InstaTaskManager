@@ -26,6 +26,10 @@ public final class P04HF05ConfigTargetSmoke {
         public boolean wrong(long k){return true;}
     }
     abstract static class AbstractReceiver implements Mobile, Factory { }
+    // Matches the exact DEX shape of X.0T4C: abstract owner, concrete method.
+    abstract static class AbstractConcreteReceiver implements Mobile, Factory {
+        public boolean BdA(long key) { return key > 0; }
+    }
     static class PackagePrivateMethod implements Mobile,Factory {
         public boolean BdA(long key){return true;}
         boolean other(long key){return true;}
@@ -49,6 +53,11 @@ public final class P04HF05ConfigTargetSmoke {
         refuses(Correct.class,Mobile.class,InvalidFactory.class);
         refuses(Correct.class,InvalidConfig.class,Factory.class);
         refuses(AbstractReceiver.class,Mobile.class,Factory.class);
+        Method abstractOwnerMethod=P04ConfigTarget.verify(AbstractConcreteReceiver.class,Mobile.class,Factory.class);
+        check(abstractOwnerMethod.getDeclaringClass()==AbstractConcreteReceiver.class,
+              "abstract class must be accepted when declared method is concrete");
+        check(!java.lang.reflect.Modifier.isAbstract(abstractOwnerMethod.getModifiers()),
+              "concrete method required even on abstract owner");
         refuses(Mobile.class,Mobile.class,Factory.class);
         refuses(NoMethod.class,Mobile.class,Factory.class);
         refuses(null,Mobile.class,Factory.class);

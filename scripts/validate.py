@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 10' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.4-p04-hf05-mobileconfig-dispatch'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 11' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.5-p04-hf06-start-controls-repair'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 10' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 11' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')

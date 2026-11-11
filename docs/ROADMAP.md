@@ -130,3 +130,8 @@ Trace exact `X.0Ie0.A02 → X.07XN.A0u` null/present categories per cohort and r
 - CI is single PR-triggered hosted Gradle; after success run the ZIP
   `install-latest` action to install the artifact matching **current PR HEAD**.
   The installer SHA-verifies before clean uninstall/install and reports scope reset.
+
+
+## P04 HF06 — restore Start A/B capture after HF05 method-shape refusal
+
+Exact IG455 DEX verified: abstract `X.0T4C` declares concrete `BdA(J)Z`; remove incorrect abstract-owner rejection, retain strict concrete method checks. Install core two A/B hooks independently of optional predicate observers; display partial readiness/error per observer, preserve exported A/B counts and privacy. One PR-only CI run and exact-head successful APK installer. Hosted and physical-device validation required.

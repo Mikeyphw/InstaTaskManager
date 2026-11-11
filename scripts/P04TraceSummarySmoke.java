@@ -63,7 +63,7 @@ public final class P04TraceSummarySmoke {
         java.lang.reflect.Field selector=P04GateTrace.class.getDeclaredField("uiSelector");
         selector.setAccessible(true);
         selector.set(null,FakeUi.class.getDeclaredField("$t"));
-        P04GateTrace.installed();
+        P04GateTrace.installed(3,"");
         check(P04GateTrace.begin(0).contains("recording"),"Begin A requires installed hooks");
         for(int i=0;i<3;i++) check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"passive A original");
         check(P04GateTrace.begin(1).contains("recording"),"Begin B");

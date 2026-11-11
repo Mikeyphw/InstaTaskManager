@@ -114,7 +114,14 @@ final class P04GateTrace {
         return m;
     }
     static void setInputPresence(P04InputPresence probe) {inputPresence=probe;}
-    static void installed() {ready=true;installStatus="READY: 5 passive IG455 hooks; HF05 config-dispatch A/B read-only";}
+    static void installed(int optionalInstalled,String unavailable) {
+        // Core state hooks are already installed, so allow A/B even if an
+        // optional configuration observer is unavailable on this IG455 build.
+        ready=true;
+        installStatus="READY: Repost A/B core (2/2), optional " + optionalInstalled + "/3; " +
+                "HF05 config-dispatch A/B read-only" +
+                (unavailable.isEmpty()?"":"; unavailable: "+unavailable);
+    }
     static P04PredicateTrace.Frame enterUi(Object instance) {
         if(!ready || !STATE.recording() || uiSelector==null || instance==null)return null;
         try {if(uiSelector.getInt(instance)!=4)return null;

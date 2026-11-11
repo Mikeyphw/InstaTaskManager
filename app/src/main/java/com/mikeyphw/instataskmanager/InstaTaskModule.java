@@ -27,45 +27,31 @@ public final class InstaTaskModule extends XposedModule {
         t.start();
     }
 
+    /**
+     * HF06: core A/B diagnostic hooks are mandatory, optional observers are
+     * independently best-effort. A missing optional method MUST NOT disable
+     * Start A / Start B. Installed hooks never change original return values.
+     */
     private void installP04(android.content.Context context,ClassLoader loader) {
         P04GateTrace.setStatus("VERIFYING exact IG455 APK (no hooks active)");
         String result=P04GateTrace.verifyExactApk(context);
-        if (!"EXACT_APK_PASS".equals(result)) {P04GateTrace.setStatus(result);return;}
+        if (!"EXACT_APK_PASS".equals(result)) {
+            P04GateTrace.setStatus(result);
+            return;
+        }
+        // Early-branch input-presence telemetry is optional; if the probe shape
+        // changes, A/B still captures the original selector results.
+        StringBuilder missing = new StringBuilder();
         try {
-            // Exact method-shape preflight for ALL five paths before installing hooks.
-            Method ui=P04GateTrace.uiMethod(loader);
-            Method ufi=P04GateTrace.ufiMethod(loader);
-            Method mobile=P04GateTrace.mobileConfigMethod(loader);
-            Method boxed=P04GateTrace.nullableConfigMethod(loader);
-            Method session=P04GateTrace.sessionCheckMethod(loader);
-            // Exact X.0Ie0.A02 -> X.07XN.A0u data-presence preflight.
-            // Only Boolean presence categories, never account/media data.
             P04InputPresence input=P04InputPresence.preflight(loader);
             P04GateTrace.setInputPresence(input);
-            hook(mobile).setId("itm-p04-hf05-mobileconfig-dispatch")
-                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
-                .intercept(chain -> {
-                    Object original=chain.proceed();
-                    try {P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original);}
-                    catch (Throwable ignored) { } // never affect Instagram calls
-                    return original;
-                });
-            hook(boxed).setId("itm-p04-hf03-config-nullable-boolean")
-                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
-                .intercept(chain -> {
-                    Object original=chain.proceed();
-                    try {P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original);}
-                    catch (Throwable ignored) { } // never affect Instagram calls
-                    return original;
-                });
-            hook(session).setId("itm-p04-hf03-session-boolean")
-                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
-                .intercept(chain -> {
-                    Object original=chain.proceed();
-                    try {P04PredicateTrace.note(P04PredicateTrace.SESSION_CHECK,original);}
-                    catch (Throwable ignored) { } // never affect Instagram calls
-                    return original;
-                });
+        } catch (Throwable e) {
+            P04GateTrace.setInputPresence(null);
+            missing.append("input:").append(e.getClass().getSimpleName());
+        }
+        try {
+            Method ui=P04GateTrace.uiMethod(loader);
+            Method ufi=P04GateTrace.ufiMethod(loader);
             hook(ui).setId("itm-p04-repost-ui-sel4")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
@@ -88,13 +74,63 @@ public final class InstaTaskModule extends XposedModule {
                     catch (Throwable ignored) { }
                     return resultValue;
                 });
-            P04GateTrace.installed();
-        } catch (Throwable t) {
-            P04GateTrace.setStatus("REFUSED: exact hook shape unavailable ("+
-                    t.getClass().getSimpleName()+")");
+        } catch (Throwable e) {
+            P04GateTrace.setStatus("REFUSED: core Repost capture hook unavailable ("+
+                    e.getClass().getSimpleName()+")");
+            return;
         }
+        // Only the three observer hooks are optional, after core capture is
+        // established. Missing an observer must not prevent core A/B readiness.
+        int optional=0;
+        try {
+            Method mobile=P04GateTrace.mobileConfigMethod(loader);
+            hook(mobile).setId("itm-p04-hf05-mobileconfig-dispatch")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object original=chain.proceed();
+                    try {P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original);}
+                    catch (Throwable ignored) { }
+                    return original;
+                });
+            optional++;
+        } catch (Throwable e) {
+            appendUnavailable(missing,"MobileConfig",e);
+        }
+        try {
+            Method boxed=P04GateTrace.nullableConfigMethod(loader);
+            hook(boxed).setId("itm-p04-hf03-config-nullable-boolean")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object original=chain.proceed();
+                    try {P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original);}
+                    catch (Throwable ignored) { }
+                    return original;
+                });
+            optional++;
+        } catch (Throwable e) {
+            appendUnavailable(missing,"NullableConfig",e);
+        }
+        try {
+            Method session=P04GateTrace.sessionCheckMethod(loader);
+            hook(session).setId("itm-p04-hf03-session-boolean")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object original=chain.proceed();
+                    try {P04PredicateTrace.note(P04PredicateTrace.SESSION_CHECK,original);}
+                    catch (Throwable ignored) { }
+                    return original;
+                });
+            optional++;
+        } catch (Throwable e) {
+            appendUnavailable(missing,"SessionCheck",e);
+        }
+        P04GateTrace.installed(optional,missing.toString());
     }
 
+    private static void appendUnavailable(StringBuilder details,String component,Throwable t) {
+        if (details.length()!=0)details.append(", ");
+        details.append(component).append(':').append(t.getClass().getSimpleName());
+    }
 
     public InstaTaskModule() { super(); }
 

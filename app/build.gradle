@@ -8,8 +8,8 @@ android {
         applicationId 'com.mikeyphw.instataskmanager'
         minSdk 28
         targetSdk 35
-        versionCode 10
-        versionName '0.6.4-p04-hf05-mobileconfig-dispatch'
+        versionCode 11
+        versionName '0.6.5-p04-hf06-start-controls-repair'
     }
     buildTypes {
         debug { minifyEnabled false }
