@@ -32,15 +32,49 @@ public final class InstaTaskModule extends XposedModule {
         String result=P04GateTrace.verifyExactApk(context);
         if (!"EXACT_APK_PASS".equals(result)) {P04GateTrace.setStatus(result);return;}
         try {
-            // Verify BOTH exact structures before installing either hook.
+            // Exact method-shape preflight for ALL five paths before installing hooks.
             Method ui=P04GateTrace.uiMethod(loader);
             Method ufi=P04GateTrace.ufiMethod(loader);
+            Method mobile=P04GateTrace.mobileConfigMethod(loader);
+            Method boxed=P04GateTrace.nullableConfigMethod(loader);
+            Method session=P04GateTrace.sessionCheckMethod(loader);
+            hook(mobile).setId("itm-p04-hf03-mobileconfig-boolean")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object original=chain.proceed();
+                    try {P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original);}
+                    catch (Throwable ignored) { } // never affect Instagram calls
+                    return original;
+                });
+            hook(boxed).setId("itm-p04-hf03-config-nullable-boolean")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object original=chain.proceed();
+                    try {P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original);}
+                    catch (Throwable ignored) { } // never affect Instagram calls
+                    return original;
+                });
+            hook(session).setId("itm-p04-hf03-session-boolean")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object original=chain.proceed();
+                    try {P04PredicateTrace.note(P04PredicateTrace.SESSION_CHECK,original);}
+                    catch (Throwable ignored) { } // never affect Instagram calls
+                    return original;
+                });
             hook(ui).setId("itm-p04-repost-ui-sel4")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
-                    Object resultValue=chain.proceed(); // ORIGINAL exactly once
-                    try {return P04GateTrace.noteUi(chain.getThisObject(),resultValue);}
-                    catch (Throwable ignored) {return resultValue;}
+                    P04PredicateTrace.Frame frame=P04GateTrace.enterUi(chain.getThisObject());
+                    try {
+                        Object resultValue=chain.proceed(); // ORIGINAL exactly once
+                        P04GateTrace.leaveUi(frame,resultValue);
+                        frame=null;
+                        try {return P04GateTrace.noteUi(chain.getThisObject(),resultValue);}
+                        catch (Throwable ignored) {return resultValue;}
+                    } finally {
+                        P04GateTrace.leaveUi(frame,null); // exception path restores ThreadLocal
+                    }
                 });
             hook(ufi).setId("itm-p04-repost-ufi-sel11-12")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)

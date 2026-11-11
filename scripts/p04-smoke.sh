@@ -13,6 +13,6 @@ javac -encoding UTF-8 -d "$tmp" \
  scripts/p04-stubs/android/util/*.java \
  scripts/p04-stubs/io/github/libxposed/api/*.java \
  scripts/p04-stubs/com/mikeyphw/instataskmanager/*.java \
- "$p/P04VariantShape.java" "$p/P04TraceSummary.java" "$p/P04GateTrace.java" "$p/InstaTaskModule.java" \
+ "$p/P04PredicateTrace.java" "$p/P04VariantShape.java" "$p/P04TraceSummary.java" "$p/P04GateTrace.java" "$p/InstaTaskModule.java" \
  scripts/P04TraceSummarySmoke.java
 java -cp "$tmp" com.mikeyphw.instataskmanager.P04TraceSummarySmoke

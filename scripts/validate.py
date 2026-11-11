@@ -25,7 +25,7 @@ require(props.get('staticScope') == 'true', 'Unexpected scope mode')
 entry = (SOURCE/'InstaTaskModule.java').read_text()
 require('com.instagram.android".equals(param.getPackageName())' in entry, 'No Instagram package guard')
 require('com.instagram.android".equals(processName)' in entry, 'No main-process guard')
-require(entry.count('chain.proceed()') == 4 and 'for (String name : new String[]{"onPause", "onDestroy"})' in entry, 'Lifecycle callback must call original exactly once per hook')
+require(entry.count('chain.proceed()') == 7 and 'for (String name : new String[]{"onPause", "onDestroy"})' in entry, 'Lifecycle callback must call original exactly once per hook')
 require('hook(resumed)' in entry and 'Activity.class.getDeclaredMethod(name)' in entry, 'Lifecycle interception missing')
 require('onPackageReady' in entry and 'onModuleLoaded' in entry, 'API 102 entry missing')
 require('io.github.libxposed:api:102.0.0' in (ROOT/'app/build.gradle').read_text(), 'Incorrect framework dependency')
@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 7' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.1-p04-hf02-variant-trace'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 8' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.2-p04-hf03-upstream-predicates'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,13 +139,13 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 7' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 8' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
 require('X.0Ie0' in trace and 'X.0F2B' in trace and 'getDeclaredField("$t")' in trace,
         'P04 runtime selector shape validation missing')
-require('selector!=4' in trace and 'selector==11 || selector==12' in trace,
+require('uiSelector.getInt(instance)!=4' in trace and 'selector==11 || selector==12' in trace,
         'P04 DEX-verified selector scope missing')
 require('chain.proceed()' in module and 'Object resultValue=chain.proceed()' in module,
         'P04 original invocation missing')
@@ -156,10 +156,9 @@ for disallowed in ('setResult(', 'getInvoker(', '.setAccessible(', 'performClick
                    'startActivity(', 'getUserId(', 'getUsername(', 'getCaption(', 'HttpURLConnection',
                    'getSharedPreferences(', 'Runtime.getRuntime().exec', 'new URL('):
     require(disallowed not in trace+summary, 'P04 read-only observation violated: '+disallowed)
-require('MAX_TRIAL_ALTERATIONS = 8' in trace and 'STATE.booleanGapReady()' in trace
-        and 'Boolean.FALSE.equals(result)' in trace and 'return Boolean.TRUE;' in trace
-        and 'booleanTrial=false' in trace and 'STATE.activeA()' in trace,
-        'P04 session-only scalar trial must require strict A/B evidence')
+require('return Boolean.TRUE;' not in trace and 'booleanTrial' not in trace
+        and 'Repost eligibility override: NOT INSTALLED' in trace,
+        'HF03 must retire the ineffective scalar override')
 require('result.getClass().getName()' in summary and 'LIMIT_PER_GATE = 256' in summary
         and 'ACCOUNT ' in summary and 'trueValues' in summary and 'falseValues' in summary,
         'P04 count-only bounded result classification missing')
@@ -218,3 +217,31 @@ require((ROOT/'scripts/P04HF02VariantSmoke.java').is_file()
         and (ROOT/'docs/P04_HF02_VARIANT_TRACING_AND_CI.md').is_file(),
         'HF02 independent tests and provenance missing')
 print('ITM_P04_HF02_EXACT_VARIANT_AND_CI_CONTRACT_PASS')
+
+# HF03: source-anchored primitive predicate tracing, thread-scoped, nonmutating.
+predicate=(SOURCE/'P04PredicateTrace.java').read_text()
+require('class P04PredicateTrace' in predicate and 'ThreadLocal<Frame>' in predicate
+        and 'MAX_FRAMES = 256' in predicate and 'MAX_ORDINAL = 4' in predicate
+        and 'ACTIVE.set(frame.parent)' in predicate, 'HF03 scoped bounded probe unavailable')
+require(all(token in trace for token in ('mobileConfigMethod','nullableConfigMethod','sessionCheckMethod',
+        'Class.forName("X.02ja",false,loader)', 'Class.forName("X.02ib",false,loader)',
+        'getDeclaredMethod("BdA",long.class)', 'getDeclaredMethod("D3r",int.class)',
+        'getDeclaredMethod("A04",session,String.class)', 'P04PredicateTrace.leave(frame,originalResult)')),
+        'HF03 verified upstream signatures or enter/leave missing')
+require(all(token in module for token in ('hook(mobile)', 'hook(boxed)', 'hook(session)',
+        'P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original)',
+        'P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original)',
+        'P04PredicateTrace.note(P04PredicateTrace.SESSION_CHECK,original)',
+        'P04GateTrace.enterUi(', 'P04GateTrace.leaveUi(frame,null)', 'return original;')),
+        'HF03 passive upstream instrumentation missing')
+require('Try A Boolean gate' not in panel and 'Trial OFF' not in panel,
+        'HF03 must retire misleading scalar trial controls')
+for forbidden in ('setAccessible(', 'getUserId(', 'getUsername(', 'getCaption(',
+                  'String.valueOf(value)', 'getArgs()', 'return Boolean.TRUE;',
+                  'new URL(', 'HttpURLConnection'):
+    require(forbidden not in predicate+trace, 'HF03 primitive privacy/safety contract: '+forbidden)
+require('bash scripts/p04-hf03-smoke.sh' in workflow
+        and (ROOT/'scripts/P04HF03PredicateSmoke.java').is_file()
+        and (ROOT/'docs/P04_HF03_UPSTREAM_PREDICATES.md').is_file(),
+        'HF03 hosted regression or provenance missing')
+print('ITM_P04_HF03_UPSTREAM_READ_ONLY_PREDICATES_PASS')

@@ -25,8 +25,8 @@ import java.util.Locale;
  *  X.0Ie0.invoke() $t=4 (RepostButtonUseCase getUiState/isEligible)
  *  X.0F2B.invoke(Object) $t=11,12 (UfiUseCase Repost button/count)
  * They are multipurpose. Passive A/B capture never changes return values.
- * An OPTIONAL, session-only Boolean trial requires a 3+/3+ exact per-selector A/B
- * false-vs-true split; otherwise no return value is ever modified.
+ * HF03 disables the legacy Boolean trial; selectors return ORIGINAL values.
+ * Primitive getter observations are captured only within selector 4 calls.
  */
 final class P04GateTrace {
     private static final String IG_PACKAGE = "com.instagram.android";
@@ -37,16 +37,12 @@ final class P04GateTrace {
     private static volatile String installStatus = "NOT REQUESTED (open Task Manager panel)";
     private static volatile boolean ready;
     private static Field uiSelector, ufiSelector;
-    private static volatile boolean booleanTrial;
-    private static int trialAlterations;
-    private static final int MAX_TRIAL_ALTERATIONS = 8;
 
     private P04GateTrace() { }
     static String status() {return installStatus;}
     static boolean ready() {return ready;}
     static int activeIndex() {return STATE.activeIndex();}
     static boolean recording() {return STATE.recording();}
-    static boolean booleanGapReady() {return STATE.booleanGapReady();}
     static String feedback() {
         if (!ready) return "P04 · " + installStatus;
         String capture=STATE.feedback();
@@ -95,23 +91,43 @@ final class P04GateTrace {
         ufiSelector=f;
         return m;
     }
-    static void installed() {ready=true;installStatus="READY: 2 passive IG455 hooks; originals unchanged";}
-    /** Returns the SAME original unless the session-only guarded A trial is explicitly enabled. */
+    static Method mobileConfigMethod(ClassLoader loader) throws ReflectiveOperationException {
+        // X.02ja is a concrete, code-bearing implementation of the abstract
+        // MobileConfigUnsafeContext.BdA interface method in the exact APK.
+        Class<?> c=Class.forName("X.02ja",false,loader);
+        Method m=c.getDeclaredMethod("BdA",long.class);
+        if(m.getReturnType()!=boolean.class)throw new NoSuchMethodException("BdA result type");
+        return m;
+    }
+    static Method nullableConfigMethod(ClassLoader loader) throws ReflectiveOperationException {
+        // X.0ApG.D3r is an interface method; hook the verified concrete X.02ib.
+        Class<?> c=Class.forName("X.02ib",false,loader);
+        Method m=c.getDeclaredMethod("D3r",int.class);
+        if(m.getReturnType()!=Boolean.class)throw new NoSuchMethodException("D3r result type");
+        return m;
+    }
+    static Method sessionCheckMethod(ClassLoader loader) throws ReflectiveOperationException {
+        Class<?> c=Class.forName("X.02xy",false,loader);
+        Class<?> session=Class.forName("com.instagram.common.session.UserSession",false,loader);
+        Method m=c.getDeclaredMethod("A04",session,String.class);
+        if(m.getReturnType()!=boolean.class)throw new NoSuchMethodException("A04 result type");
+        return m;
+    }
+    static void installed() {ready=true;installStatus="READY: 5 passive IG455 hooks; upstream read-only";}
+    static P04PredicateTrace.Frame enterUi(Object instance) {
+        if(!ready || !STATE.recording() || uiSelector==null || instance==null)return null;
+        try {if(uiSelector.getInt(instance)!=4)return null;
+             return P04PredicateTrace.enter(STATE.activeIndex());}
+        catch(Throwable ignored){return null;}
+    }
+    static void leaveUi(P04PredicateTrace.Frame frame,Object originalResult) {
+        P04PredicateTrace.leave(frame,originalResult);
+    }
+    /** Passive result classification; caller always receives the exact original object. */
     static Object noteUi(Object instance, Object result) {
         if (!STATE.recording() || uiSelector==null || instance==null) return result;
-        try {
-            int selector=uiSelector.getInt(instance);
-            if (selector!=4) return result;
-            // Always record the ORIGINAL, never count our own replacement as success.
-            boolean eligibleBefore=STATE.booleanGapReady();
-            STATE.record(4,result);
-            if (eligibleBefore && booleanTrial && STATE.activeA() &&
-                    Boolean.FALSE.equals(result) && trialAlterations < MAX_TRIAL_ALTERATIONS) {
-                trialAlterations++;
-                if (trialAlterations>=MAX_TRIAL_ALTERATIONS)booleanTrial=false;
-                return Boolean.TRUE; // only exact selector 4, exactly Boolean.FALSE
-            }
-        } catch (Throwable ignored) { }
+        try {if(uiSelector.getInt(instance)==4)STATE.record(4,result);}
+        catch(Throwable ignored) { }
         return result;
     }
     static void noteUfi(Object instance, Object result) {
@@ -120,26 +136,16 @@ final class P04GateTrace {
         catch (Throwable ignored) { }
     }
     static String begin(int index) {
-        booleanTrial=false; // always disarm when manually switching cohort
         if (!ready) return "REFUSED: P04 hooks not ready ("+status()+")";
         STATE.start(index);
         return "P04 recording manual account "+(index==0?"A":"B")+" (no identity read)";
     }
-    static String stop() {booleanTrial=false;STATE.stop();return "P04 stopped (trial OFF)";}
-    static String clear() {booleanTrial=false;trialAlterations=0;STATE.clear();return "P04 capture cleared";}
-    static String enableBooleanTrial() {
-        if (!ready || !STATE.activeA() || !STATE.booleanGapReady())
-            return "REFUSED: require A=3+ Boolean.FALSE and B=3+ Boolean.TRUE for exact selector 4, then start A.";
-        booleanTrial=true;
-        trialAlterations=0;
-        return "EXPERIMENT ARMED: up to 8 scalar false-to-true replacements on selector 4 in manual A only; no native actions invoked.";
-    }
-    static String disableTrial() {booleanTrial=false;return "P04 Boolean trial OFF";}
+    static String stop() {STATE.stop();return "P04 stopped (read-only)";}
+    static String clear() {STATE.clear();P04PredicateTrace.clear();return "P04 capture cleared";}
     static String report() {
         return "P04 EXACT-APK A/B TRACE\nHook: "+status()+"\n"+STATE.render()
-            + "Conservative scalar trial: "+(booleanTrial?"ARMED":"OFF")
-            + " | replacements="+trialAlterations+"/"+MAX_TRIAL_ALTERATIONS
-            + " | A/B Boolean gap="+(STATE.booleanGapReady()?"YES":"NO")+"\n";
+            + P04PredicateTrace.report()
+            + "Repost eligibility override: NOT INSTALLED; original results preserved.\n";
     }
 
     static String countVisibleLabels(Activity activity,View excludedPanel,View excludedChip) {

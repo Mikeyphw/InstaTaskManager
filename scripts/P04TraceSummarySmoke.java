@@ -68,14 +68,11 @@ public final class P04TraceSummarySmoke {
         for(int i=0;i<3;i++) check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"passive A original");
         check(P04GateTrace.begin(1).contains("recording"),"Begin B");
         for(int i=0;i<3;i++) check(Boolean.TRUE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.TRUE)),"passive B original");
-        check(P04GateTrace.begin(0).contains("recording"),"Begin A trial");
-        check(P04GateTrace.enableBooleanTrial().contains("ARMED"),"eligible scalar trial armed");
+        check(P04GateTrace.begin(0).contains("recording"),"Begin A passive");
         check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(3),Boolean.FALSE)),"other selector untouched");
-        check(P04GateTrace.noteUi(new FakeUi(3),new Object()).getClass()==Object.class,"non-Boolean untouched");
-        for(int i=0;i<8;i++)check(Boolean.TRUE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"bounded trial one of eight");
-        check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"trial auto-disarmed");
-        check(P04GateTrace.report().contains("replacements=8/8"),"bounded trial report");
-        check(P04GateTrace.stop().contains("trial OFF"),"stop disarms");
+        for(int i=0;i<8;i++)check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"no scalar override");
+        check(P04GateTrace.report().contains("Repost eligibility override: NOT INSTALLED"),"no override report");
+        check(P04GateTrace.stop().contains("read-only"),"stop read only");
         check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"stopped passive");
         System.out.println("ITM_P04_AB_SUMMARY_SMOKE_PASS "+count+"/"+count);
     }

@@ -103,3 +103,7 @@ Stacked PR P04 must target P03 PR #2 branch; no merge or force-push.
 - Exact 455 DEX result pair classification for selector 4 and 11 (singleton vs payload, primitive aggregate counts, raw references never exported).
 - PR-only CI for feature branches, push CI for main; concurrency cancels stale runs; artifact name uses source PR head SHA.
 - Next: physical device compare A/B, isolate selector state-creation predicate, then only consider a reversible native UI visibility hook on a verified gate.
+
+
+## P04 HF03 upstream primitive trace (2026-11-11)
+Read-only, exact-IG455, selector-4-local upstream Boolean instrumentation. Retired Boolean force-enable trial because A/B evidence is non-Boolean. Next: compare A/B guarded primitive call paths; only consider an explicitly reversible override after the actual failed predicate and its semantics are verified. CI remains PR-only for feature branches.

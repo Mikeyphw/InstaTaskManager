@@ -447,7 +447,9 @@ final class TaskPanel {
                 "Repost: after an exact scan, Try native Repost only reveals an EXISTING " +
                 "hidden clickable native View labelled Repost. Most Instagram views may not qualify.\n" +
                 "Friend avatars: no verified safe native presentation gate, so requests are " +
-                "PENDING and do NOT yet alter Instagram.\n" + nativeTrial + "\n\n" +
+                "PENDING and do NOT yet alter Instagram.\n" +
+                "HF03: upstream Repost predicate trace is READ-ONLY. No Boolean force trial.\n" +
+                nativeTrial + "\n\n" +
                 "Disable repost in InstaEclipse must be OFF. No synthetic repost/like data.");
         }
 
@@ -549,23 +551,12 @@ final class TaskPanel {
         p04row2.addView(inspect,new LinearLayout.LayoutParams(0,dp(42),1));
         p04row2.addView(clear,new LinearLayout.LayoutParams(0,dp(42),1));
         socialSwitches.addView(p04row2);
-        LinearLayout trialRow=new LinearLayout(activity);
-        Button trial=button("Try A Boolean gate",()->{
-            p04Action=P04GateTrace.enableBooleanTrial();actionToast(p04Action);update();
-        });
-        Button trialOff=button("Trial OFF",()->{
-            p04Action=P04GateTrace.disableTrial();actionToast(p04Action);update();
-        });
-        trialRow.addView(trial,new LinearLayout.LayoutParams(0,dp(42),1));
-        trialRow.addView(trialOff,new LinearLayout.LayoutParams(0,dp(42),1));
-        socialSwitches.addView(trialRow);
         TextView p04Help=txt("Procedure: with the affected account, Start A, browse the same public " +
                 "Reel and feed post, then Stop. Switch accounts, Start B, repeat, Stop, Export. " +
                 "Count UI labels is optional; it checks exact words only and saves counts. " +
                 "Do not leave the wrong account capture active while switching. " +
-                "P04 only alters a result if a strict, 3+/3+ Boolean A/B difference is " +
-                "measured and you explicitly arm the session-only Try A Boolean gate. " +
-                "Never use it on an account other than manual A; Stop disarms it.",11,false);
+                "HF03 records upstream Boolean outcomes in their original call order, only " +
+                "inside Repost selector 4. All Instagram results remain unchanged.",11,false);
         socialSwitches.addView(p04Help);
         TextView status = txt("OFF by default. Avatar switches are requested-only; " +
                 "no avatar hooks are installed.\nManual Repost trials require a successful " +
