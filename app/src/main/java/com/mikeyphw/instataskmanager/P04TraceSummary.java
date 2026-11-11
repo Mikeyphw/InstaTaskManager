@@ -13,8 +13,12 @@ final class P04TraceSummary {
     };
     static final class Count {
         int observed, trueValues, falseValues, nullValues, objectValues, dropped;
+        int singletonVariant, payloadVariant, unknownVariant, invalidShape;
+        int intZero, intPositive, intNegative;
+        int flag06True, flag06False, flag07True, flag07False;
+        int referenceFieldsPresent, stringFieldsPresent;
         String lastObjectClass = "none"; // class name only, never Object.toString()
-        void record(Object result) {
+        void record(int selector,Object result) {
             if (observed >= LIMIT_PER_GATE) { dropped++; return; }
             observed++;
             if (result == null) nullValues++;
@@ -26,6 +30,22 @@ final class P04TraceSummary {
                 // Only code metadata, not content or Object.toString().
                 String type = result.getClass().getName();
                 lastObjectClass = type.length() > 80 ? type.substring(0,80) : type;
+                P04VariantShape.Observation shape=P04VariantShape.inspect(selector,result);
+                if (shape.variant==P04VariantShape.Observation.SINGLETON) singletonVariant++;
+                else if (shape.variant==P04VariantShape.Observation.PAYLOAD) {
+                    payloadVariant++;
+                    if(shape.integerSign==0)intZero++;
+                    else if(shape.integerSign>0)intPositive++;
+                    else intNegative++;
+                    if(shape.hasUiFlags) {
+                        if(shape.uiFlag06)flag06True++;else flag06False++;
+                        if(shape.uiFlag07)flag07True++;else flag07False++;
+                    }
+                    referenceFieldsPresent+=shape.presentReferences;
+                    stringFieldsPresent+=shape.presentStrings;
+                }
+                else if (shape.variant==P04VariantShape.Observation.SHAPE_MISMATCH) invalidShape++;
+                else unknownVariant++;
             }
         }
     }
@@ -98,7 +118,7 @@ final class P04TraceSummary {
     synchronized void record(int selector, Object result) {
         if (active < 0) return;
         for (int i=0;i<SELECTORS.length;i++)
-            if (SELECTORS[i]==selector) {counts[active][i].record(result);return;}
+            if (SELECTORS[i]==selector) {counts[active][i].record(selector,result);return;}
     }
     synchronized void uiCheck(String sanitizedCounts) {
         if (active>=0) uiSamples[active]=sanitizedCounts;
@@ -119,10 +139,28 @@ final class P04TraceSummary {
                  .append(" object=").append(c.objectValues)
                  .append(" capped_extra=").append(c.dropped)
                  .append(" type=").append(c.lastObjectClass).append("\n");
+                if (i==0 || i==1) {
+                    b.append("  IG455 object-shape: singleton=").append(c.singletonVariant)
+                     .append(" payload=").append(c.payloadVariant)
+                     .append(" unknown=").append(c.unknownVariant)
+                     .append(" shape_mismatch=").append(c.invalidShape).append("\n")
+                     .append("  payload integer A00: zero=").append(c.intZero)
+                     .append(" positive=").append(c.intPositive)
+                     .append(" negative=").append(c.intNegative).append("\n");
+                    if(i==0) b.append("  payload booleans: A06(true/false)=")
+                        .append(c.flag06True).append('/').append(c.flag06False)
+                        .append(" A07(true/false)=")
+                        .append(c.flag07True).append('/').append(c.flag07False)
+                        .append("\n  non-null fields across payload samples: references=")
+                        .append(c.referenceFieldsPresent).append(" strings=")
+                        .append(c.stringFieldsPresent).append("\n");
+                }
             }
             b.append("Visible UI label counts: ").append(uiSamples[a]).append("\n");
         }
         b.append("Interpretation: selection-specific method outcomes are NOT proof of account eligibility.\n")
+         .append("IG455 object shape fields are structural metadata; A00/A06/A07 semantics NOT confirmed.\n")
+         .append("Only primitive buckets and reference presence totals recorded; values and objects never exported.\n")
          .append("Non-Boolean result objects are NOT coerced, mutated, or printed.\n")
          .append("Captures are volatile and disappear when the Instagram process exits.\n");
         return b.toString();

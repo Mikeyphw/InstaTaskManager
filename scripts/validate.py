@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 6' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.0-p04-hf01-feedback'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 7' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.1-p04-hf02-variant-trace'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 6' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 7' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -195,3 +195,26 @@ print('ITM_P04_HF01_CAPTURE_FEEDBACK_SOURCE_PASS')
 require('bash scripts/p04-hf01-smoke.sh' in (ROOT/'.github/workflows/android.yml').read_text()
         and (ROOT/'scripts/P04Hf01SyntaxSmoke.java').is_file(),
         'P04 HF01 full UI Java syntax parse gate missing')
+
+# HF02: APK-supported variant shapes + one run per feature-branch PR.
+shape=(SOURCE/'P04VariantShape.java').read_text()
+workflow=(ROOT/'.github/workflows/android.yml').read_text()
+require(all(token in shape for token in (
+    'X.09j4','X.09ZC','X.09Xx','X.09YD','X.0Nhe','X.0Ngy',
+    'A00','A01','A02','A03','A04','A05','A06','A07',
+    'getBoolean','getInt','Observation.SHAPE_MISMATCH')),
+    'HF02 IG455 variant type and field-shape guards missing')
+for forbidden in ('setAccessible(', 'getDeclaredMethods()', 'Object.toString(', 'java.net.', 'android.accounts.'):
+    require(forbidden not in shape, 'HF02 invasive object inspection: '+forbidden)
+require('P04VariantShape.inspect(selector,result)' in summary and 'singletonVariant' in summary
+        and 'referenceFieldsPresent' in summary and 'stringFieldsPresent' in summary,
+        'HF02 aggregate shape counters missing')
+require('branches: [main]' in workflow and 'types: [opened, synchronize, reopened]' in workflow
+        and 'cancel-in-progress: true' in workflow and 'p04-hf02-smoke.sh' in workflow
+        and 'p04-hf02-workflow-contract.py' in workflow,
+        'HF02 duplicate-CI fix or hosted validation missing')
+require((ROOT/'scripts/P04HF02VariantSmoke.java').is_file()
+        and (ROOT/'scripts/p04-hf02-smoke.sh').is_file()
+        and (ROOT/'docs/P04_HF02_VARIANT_TRACING_AND_CI.md').is_file(),
+        'HF02 independent tests and provenance missing')
+print('ITM_P04_HF02_EXACT_VARIANT_AND_CI_CONTRACT_PASS')

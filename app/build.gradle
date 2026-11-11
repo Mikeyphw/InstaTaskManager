@@ -8,8 +8,8 @@ android {
         applicationId 'com.mikeyphw.instataskmanager'
         minSdk 28
         targetSdk 35
-        versionCode 6
-        versionName '0.6.0-p04-hf01-feedback'
+        versionCode 7
+        versionName '0.6.1-p04-hf02-variant-trace'
     }
     buildTypes {
         debug { minifyEnabled false }

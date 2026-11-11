@@ -97,3 +97,9 @@ Stacked PR P04 must target P03 PR #2 branch; no merge or force-push.
 - Surface Android hook verification outcomes without restarting the panel.
 - Keep user-visible feedback for Start/Stop, UI label count, scan and export.
 - Count-only A/B observers and bounded Boolean trial remain unchanged.
+
+
+## P04 HF02 — variant-aware A/B trace + CI de-duplication
+- Exact 455 DEX result pair classification for selector 4 and 11 (singleton vs payload, primitive aggregate counts, raw references never exported).
+- PR-only CI for feature branches, push CI for main; concurrency cancels stale runs; artifact name uses source PR head SHA.
+- Next: physical device compare A/B, isolate selector state-creation predicate, then only consider a reversible native UI visibility hook on a verified gate.
