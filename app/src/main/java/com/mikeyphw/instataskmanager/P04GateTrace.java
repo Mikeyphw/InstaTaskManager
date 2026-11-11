@@ -44,6 +44,14 @@ final class P04GateTrace {
     private P04GateTrace() { }
     static String status() {return installStatus;}
     static boolean ready() {return ready;}
+    static int activeIndex() {return STATE.activeIndex();}
+    static boolean recording() {return STATE.recording();}
+    static boolean booleanGapReady() {return STATE.booleanGapReady();}
+    static String feedback() {
+        if (!ready) return "P04 · " + installStatus;
+        String capture=STATE.feedback();
+        return capture;
+    }
     static void setStatus(String status) {installStatus=status;}
 
     static String verifyExactApk(Context context) {

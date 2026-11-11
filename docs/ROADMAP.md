@@ -90,3 +90,10 @@ Stacked PR P04 must target P03 PR #2 branch; no merge or force-push.
 - Manual Account A/B captures count Boolean/null/object results without retaining identifiers, arguments, or result content. Transient label checks count only exact `Repost`/`Friends` words in visible native views, excluding the module panel; absence is not proof of absence in Litho or other rendering systems.
 - The only active trial requires >=3 pure Boolean `false` results on A and >=3 pure Boolean `true` results on B from exact selector 4, manual A selected, and a separate explicit user action. It can replace at most eight scalar `false` values in the running process. It is off on startup, Stop, switching cohorts, or Clear. It does not force any complex UI state or social-data lists.
 - Follow up only after exported A/B report: identify actual UI state field and Friends-tab/social-context data gate, then add verified, reversible presentation-only controls. Do not infer server eligibility or manufacture friend data.
+
+## P04 HF01: Capture feedback
+
+- Add a persistent trace state banner and minimized chip status, live A/B elapsed timer and gate-event counter.
+- Surface Android hook verification outcomes without restarting the panel.
+- Keep user-visible feedback for Start/Stop, UI label count, scan and export.
+- Count-only A/B observers and bounded Boolean trial remain unchanged.

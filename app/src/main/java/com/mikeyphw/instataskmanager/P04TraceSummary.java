@@ -32,6 +32,9 @@ final class P04TraceSummary {
     private final Count[][] counts = new Count[2][SELECTORS.length];
     private final String[] uiSamples = {"Not checked", "Not checked"};
     private int active = -1;
+    private int lastActive = -1;
+    private long startedNanos;
+    private long lastElapsedSeconds;
     P04TraceSummary() { clear(); }
     synchronized void clear() {
         for (int a=0;a<2;a++) {
@@ -39,14 +42,52 @@ final class P04TraceSummary {
             uiSamples[a] = "Not checked";
         }
         active=-1;
+        lastActive=-1;
+        startedNanos=0;
+        lastElapsedSeconds=0;
     }
     synchronized int start(int accountIndex) {
         if (accountIndex<0 || accountIndex>1) return -1;
         active=accountIndex;
+        startedNanos=System.nanoTime();
         return active;
     }
-    synchronized void stop() {active=-1;}
+    synchronized void stop() {
+        if (active >= 0) {
+            lastElapsedSeconds=elapsedSeconds();
+            lastActive=active;
+        }
+        active=-1;
+        startedNanos=0;
+    }
+    synchronized int activeIndex() {return active;}
     synchronized boolean activeA() {return active==0;}
+    private long elapsedSeconds() {
+        return active < 0 || startedNanos == 0 ? 0 :
+            Math.max(0, (System.nanoTime() - startedNanos) / 1_000_000_000L);
+    }
+    private int events(int cohort) {
+        int total=0;
+        for (Count count : counts[cohort]) total+=count.observed + count.dropped;
+        return total;
+    }
+    private static String clock(long elapsedSeconds) {
+        return String.format(Locale.ROOT, "%02d:%02d", elapsedSeconds/60, elapsedSeconds%60);
+    }
+    /** Lightweight, privacy-safe UI snapshot; no polling of Instagram structures. */
+    synchronized String feedback() {
+        if (active >= 0) {
+            int total=events(active);
+            return "● RECORDING " + (active==0 ? "A" : "B") + " · " +
+                    clock(elapsedSeconds()) + " · " + total + " gate events" +
+                    (total==0 ? " (browse a post/Reel)" : "");
+        }
+        if (lastActive >= 0) {
+            return "■ STOPPED · last " + (lastActive==0 ? "A" : "B") + " · " +
+                    clock(lastElapsedSeconds) + " · " + events(lastActive) + " events";
+        }
+        return "● READY · press Start A or Start B";
+    }
     /** Strong scalar A/B signal, NOT proof of permission or shared rollout. */
     synchronized boolean booleanGapReady() {
         Count a=counts[0][0],b=counts[1][0];

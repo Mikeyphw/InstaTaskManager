@@ -9,15 +9,22 @@ public final class P04TraceSummarySmoke {
     public static void main(String[] args) throws Exception {
         P04TraceSummary s=new P04TraceSummary();
         check(!s.recording(),"default off");
+        check(s.feedback().contains("READY"),"ready feedback");
+        check(s.activeIndex()==-1,"not active on startup");
         check(s.start(-1)==-1,"invalid -1");
         check(s.start(2)==-1,"invalid 2");
         check(s.start(0)==0,"start A");
         check(s.recording(),"recording A");
+        check(s.feedback().contains("RECORDING A"),"A feedback visible");
+        check(s.feedback().contains("00:00"),"elapsed-time display");
+        check(s.feedback().contains("0 gate events"),"zero-event feedback explicit");
+        check(s.activeIndex()==0,"capture A status index");
         s.record(4,Boolean.FALSE);
         s.record(4,Boolean.TRUE);
         s.record(11,null);
         s.record(12,new Object());
         s.record(5555,Boolean.FALSE);
+        check(s.feedback().contains("4 gate events"),"live counter reflects all selectors");
         String a=s.render();
         check(a.contains("true=1 false=1"),"boolean tally A");
         check(a.contains("null=1"),"null tally A");
@@ -26,7 +33,10 @@ public final class P04TraceSummarySmoke {
         check(!a.contains("5555"),"unknown selector skipped");
         s.stop();
         check(!s.recording(),"stop");
+        check(s.activeIndex()==-1,"stop clears active cohort");
+        check(s.feedback().contains("STOPPED"),"stopped feedback visible");
         check(s.start(1)==1,"start B");
+        check(s.feedback().contains("RECORDING B"),"B feedback visible");
         s.record(4,Boolean.TRUE);
         s.uiCheck("visited=5 repost_labels=1 friends_labels=0");
         String b=s.render();
@@ -37,6 +47,7 @@ public final class P04TraceSummarySmoke {
         check(s.render().contains("samples=256") && s.render().contains("capped_extra=44"),"bounded counters");
         s.clear();
         check(!s.recording(),"clear disarms");
+        check(s.feedback().contains("READY"),"clear resets feedback");
         check(s.render().contains("samples=0"),"clear empties");
         check(s.render().contains("Not checked"),"clear UI counts");
         s.start(0);

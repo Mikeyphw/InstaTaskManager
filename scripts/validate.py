@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 5' in (ROOT/'app/build.gradle').read_text() and "versionName '0.5.0-p04-account-ab-trace'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 6' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.0-p04-hf01-feedback'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 5' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 6' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -169,3 +169,29 @@ require('P04GateTrace.begin(' in panel and 'P04GateTrace.countVisibleLabels(' in
 require('bash scripts/p04-smoke.sh' in (ROOT/'.github/workflows/android.yml').read_text(),
         'P04 full source javac gate missing from hosted CI')
 print('ITM_P04_EXACT_APK_PASSIVE_AB_CONTRACT_PASS')
+
+# P04 HF01 visual capture feedback: no new Android permissions, no hidden data.
+summary=(SOURCE/'P04TraceSummary.java').read_text()
+trace=(SOURCE/'P04GateTrace.java').read_text()
+panel=(SOURCE/'TaskPanel.java').read_text()
+require('synchronized String feedback()' in summary and 'System.nanoTime()' in summary
+        and 'gate events' in summary and 'activeIndex()' in summary,
+        'P04 HF01 live count/timer unavailable')
+require('static String feedback()' in trace and 'STATE.feedback()' in trace
+        and 'static int activeIndex()' in trace,
+        'P04 HF01 capture state not exposed to UI')
+require('private void refreshCaptureFeedback()' in panel and 'private void startCaptureTicker()' in panel
+        and 'MAIN.postDelayed(this,1000)' in panel and 'MAIN.removeCallbacks(captureTicker)' in panel
+        and 'captureBanner=txt(' in panel and 'chip.setText(active == 0' in panel,
+        'P04 HF01 ticker/status banner/chip/teardown missing')
+require('lastP04Ready != newReady' in panel and 'renderSocialContent();' in panel,
+        'P04 HF01 hook verification must refresh start controls')
+require('Saving…' in panel and 'Saving diagnostics to Downloads' in panel
+        and 'actionToast(p04Action)' in panel,
+        'P04 HF01 action/export immediate feedback missing')
+require('bash scripts/p04-smoke.sh' in (ROOT/'.github/workflows/android.yml').read_text(),
+        'P04 HF01 hosted smoke gate missing')
+print('ITM_P04_HF01_CAPTURE_FEEDBACK_SOURCE_PASS')
+require('bash scripts/p04-hf01-smoke.sh' in (ROOT/'.github/workflows/android.yml').read_text()
+        and (ROOT/'scripts/P04Hf01SyntaxSmoke.java').is_file(),
+        'P04 HF01 full UI Java syntax parse gate missing')
