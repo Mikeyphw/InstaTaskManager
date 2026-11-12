@@ -77,7 +77,7 @@ def install_latest():
         not re.fullmatch('[0-9a-f]{40}',pr.get('headRefOid') or '')):
         raise RuntimeError('REFUSED: PR #3 identity/base/branch changed')
     sha=pr['headRefOid']
-    print('ITM_HF11_INSTALL_EXACT_PR_HEAD='+sha,flush=True)
+    print('ITM_HF12_INSTALL_EXACT_PR_HEAD='+sha,flush=True)
     runs=gh_json('run','list','-R',REPO,'--branch',BRANCH,
                  '--workflow','android.yml','--limit','70','--json',
                  'databaseId,headSha,event,status,conclusion')
@@ -86,7 +86,7 @@ def install_latest():
     artifacts=gh_json('api','repos/'+REPO+'/actions/runs/'+str(rid)+'/artifacts')
     artifact_name=choose_artifact(artifacts.get('artifacts',[]),sha)
     tmp=os.environ.get('TMPDIR') or tempfile.gettempdir()
-    with tempfile.TemporaryDirectory(prefix='itm-p04-hf11-apk-',dir=tmp) as t:
+    with tempfile.TemporaryDirectory(prefix='itm-p04-hf12-apk-',dir=tmp) as t:
         folder=Path(t)
         command(['gh','run','download',str(rid),'-R',REPO,'-n',artifact_name,
                  '-D',folder],live=True)
@@ -114,13 +114,13 @@ def install_latest():
         command(['adb','-s',ADB_SERIAL,'get-state'])
         prior=command(['adb','-s',ADB_SERIAL,'shell','pm','path',APK_PACKAGE],allow_failure=True)
         if (prior.stdout or '').strip().startswith('package:'):
-            print('ITM_HF11_UNINSTALLING_PRIOR_DEBUG_APK (module settings and Vector scope reset)',flush=True)
+            print('ITM_HF12_UNINSTALLING_PRIOR_DEBUG_APK (module settings and Vector scope reset)',flush=True)
             command(['adb','-s',ADB_SERIAL,'uninstall',APK_PACKAGE],live=True)
         command(['adb','-s',ADB_SERIAL,'install',target],live=True)
         location=command(['adb','-s',ADB_SERIAL,'shell','pm','path',APK_PACKAGE]).stdout or ''
         if 'package:' not in location:
             raise RuntimeError('APK install returned success but package path is missing')
-        print('ITM_HF11_APK_INSTALL_PASS commit='+sha+' run='+str(rid),flush=True)
+        print('ITM_HF12_APK_INSTALL_PASS commit='+sha+' run='+str(rid),flush=True)
         print('APK='+str(target),flush=True)
         print('SHA256='+actual,flush=True)
         print('Next: restart Instagram to reload the LSPosed module, then capture Account A/B.',flush=True)

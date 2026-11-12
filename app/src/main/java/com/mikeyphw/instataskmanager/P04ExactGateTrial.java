@@ -51,7 +51,9 @@ final class P04ExactGateTrial {
      * HF11: the exact IG455 D3r data gate is nullable. A null result is not
      * FALSE, is never changed, and may coexist with a large, repeated false
      * cohort. Qualify only the false branch, with explicit null and coverage
-     * bounds, an all-true B cohort, native data, and the original return shape.
+     * bounds, a strongly-positive B cohort (one <=5% false singleton outlier),
+     * native data, and the original return shape. This is a user-initiated,
+     * EXPERIMENTAL UI-only branch trial; the server still decides permissions.
      * FIRST_CONFIG retains the original clean split requirement.
      */
     static synchronized int eligibleGate() {
@@ -75,12 +77,26 @@ final class P04ExactGateTrial {
                    (long)bT*4L <
                         (long)presentCounts[1][P04BranchInputs.PRESENT]*3L)continue;
             }
+            // HF12: the observed working cohort had 26 TRUE/payload and one
+            // FALSE/singleton. Permit that single content-specific outlier
+            // ONLY for D3r, with at least 10 working TRUE samples and <=5%
+            // original FALSE singleton observations. Never permit B false
+            // payload, null, non-Boolean, or a second contradictory result.
+            int bFalseSingleton=counts[1][DATA_ELIGIBILITY][1][0];
+            if(gate==DATA_ELIGIBILITY){
+                if(bFalseSingleton>1 || (bFalseSingleton>0 && (aF<10 || bT<10)) ||
+                   (long)bFalseSingleton*20L>(long)(bT+bFalseSingleton))continue;
+            }
             int mismatched=0;
             for(int a=0;a<2;a++)for(int o=0;o<OUTCOMES;o++)for(int st=0;st<3;st++){
                 if((a==0 && o==1 && st==0) || (a==1 && o==0 && st==1))continue;
                 // Null in A is only permissible on the exact nullable D3r
                 // gate, and ONLY with the same singleton terminal state.
                 if(gate==DATA_ELIGIBILITY && a==0 && o==2 && st==0)continue;
+                // HF12 limited manual trial: tolerate only ONE B false that
+                // already resulted in a native singleton (never a payload).
+                if(gate==DATA_ELIGIBILITY && a==1 && o==1 && st==0 &&
+                   bFalseSingleton<=1)continue;
                 mismatched+=counts[a][gate][o][st];
             }
             if(mismatched==0)return gate;
@@ -106,11 +122,11 @@ final class P04ExactGateTrial {
             return "No exact eligibility getter callbacks; factory dispatch may be different";
         int candidate=eligibleGate();
         if(candidate>=0){
-            if(candidate==DATA_ELIGIBILITY && counts[0][DATA_ELIGIBILITY][2][0]>0)
-                return "Qualified exact REPOST_DATA_BOOLEAN false-only trial; A null results will be preserved; Start A then Try A UI gate";
+            if(candidate==DATA_ELIGIBILITY)
+                return "HF12 EXPERIMENTAL: A false-only trial eligible; one B singleton false outlier permitted (<=5%); A null results will be preserved; Start A then Try A UI gate";
             return "Qualified "+LABELS[candidate]+"; Start A and press Try A UI gate";
         }
-        return "A/B exact gate is not qualified (requires A false with optional bounded null, B true, and native data); no override";
+        return "A/B exact gate unqualified: need >=10 A false singleton, >=10 B true payload, at most one B false singleton (<=5%), intact native data, no other contradictions; no override";
     }
     static synchronized String arm(int activeCohort) {
         disarm();
@@ -119,7 +135,7 @@ final class P04ExactGateTrial {
         int g=eligibleGate();
         if(g<0)return "REFUSED: "+reason()+". No change made.";
         armedGate=g;changed=0;deadline=System.nanoTime()+DURATION_NS;
-        return "ARMED: "+LABELS[g]+" · at most "+LIMIT+" false→true UI checks for 30 s, Account A only.";
+        return "ARMED: HF12 EXPERIMENTAL "+LABELS[g]+" · "+LIMIT+" false→true local UI checks / 30 s max, Account A only; no automatic repost.";
     }
     /** Called only inside the original IG455 selector 4 stack and exact gate. */
     static synchronized Object maybeOverride(int cohort,int dataPresence,int gate,Object original) {
@@ -160,7 +176,7 @@ final class P04ExactGateTrial {
                 out.append('\n');
             }
         }
-        out.append("HF11: nullable D3r trial qualifies only the false A branch; null stays native, B must be true, exact data required.\n");
+        out.append("HF12 EXPERIMENTAL: exact D3r A false-only override may tolerate one B false/singleton outlier <=5%; A/B native data required; null stays native and is never modified.\n");
         out.append("Eligible guarded trial: ")
            .append(eligibleGate()<0?"NO":LABELS[eligibleGate()])
            .append(" | Reason: ").append(reason())

@@ -570,7 +570,7 @@ final class TaskPanel {
         gateRow.addView(gate,new LinearLayout.LayoutParams(0,dp(42),1));
         gateRow.addView(gateOff,new LinearLayout.LayoutParams(0,dp(42),1));
         socialSwitches.addView(gateRow);
-        TextView trialStatus=txt("HF11 exact UI check: "+P04ExactGateTrial.status()+
+        TextView trialStatus=txt("HF12 experimental UI check: "+P04ExactGateTrial.status()+
             "; eligibility="+(P04ExactGateTrial.eligibleGate()<0 ? "NOT PROVEN":
             P04ExactGateTrial.LABELS[P04ExactGateTrial.eligibleGate()])+". " +
             "Reason: "+P04ExactGateTrial.reason()+". No fake media or social data.",11,false);
@@ -580,7 +580,7 @@ final class TaskPanel {
                 "Count UI labels is optional; it checks exact words only and saves counts. " +
                 "Do not leave the wrong account capture active while switching. " +
                 "Only after both accounts produce repeated exact eligibility data with native Repost objects " +
-                "present can you return to A, press Start A, then Try A UI gate. Native null results are never modified. " +
+                "present can you return to A, press Start A, then Try A UI gate. HF12 tolerates one false singleton result on B (<=5%); native null results are never modified. " +
                 "The trial expires after 30 seconds or 6 changed local results, whichever comes first. " +
                 "Stop or Trial OFF disarms it. If Instagram behaves oddly, restart it. " +
                 "HF03 records upstream Boolean outcomes in their original call order, only " +

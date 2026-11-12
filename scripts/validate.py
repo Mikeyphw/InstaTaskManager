@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 15' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.10-p04-hf11-nullable-data-gate'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 16' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.11-p04-hf12-experimental-gate'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 15' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 16' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -404,3 +404,16 @@ assert 'bash scripts/p04-hf11-smoke.sh' in workflow
 assert (ROOT/'scripts/P04HF11NullableGateSmoke.java').is_file()
 assert (ROOT/'docs/P04_HF11_NULLABLE_DATA_GATE.md').is_file()
 print('ITM_P04_HF11_NULL_PRESERVATION_POLICY_AND_HOSTED_GATES_PASS')
+
+# HF12: tightly relaxed minority working-cohort outlier, never unqualified override.
+trial12=(SOURCE/'P04ExactGateTrial.java').read_text()
+assert 'bFalseSingleton>1' in trial12 and 'bFalseSingleton*20L' in trial12
+assert 'gate==DATA_ELIGIBILITY && a==1 && o==1 && st==0' in trial12
+assert 'if(eligibleGate()!=armedGate){disarm();return original;}' in trial12
+assert '!Boolean.FALSE.equals(original)' in trial12 and 'gate!=armedGate' in trial12
+assert 'DURATION_NS=30_000_000_000L' in trial12 and 'LIMIT=6' in trial12
+assert 'HF12 EXPERIMENTAL' in trial12
+assert 'bash scripts/p04-hf12-smoke.sh' in workflow
+assert (ROOT/'scripts/P04HF12OutlierSmoke.java').is_file()
+assert (ROOT/'docs/P04_HF12_EXPERIMENTAL_TRIAL.md').is_file()
+print('ITM_P04_HF12_EXPERIMENTAL_SINGLE_B_OUTLIER_AND_SAFETY_PASS')

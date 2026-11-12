@@ -182,3 +182,8 @@ HF08 A/B captured the actual config-provider class `X.02nr` on both accounts. `c
 ## P04 HF11 — null-safe Repost-data Boolean experiment
 
 Source implemented; hosted/physical **pending**. HF10 report showed exact-key D3r difference (A 42 false + 7 null, B 31 true), with one unobserved A call and A03 present. Refine trial qualification only for exact DATA_ELIGIBILITY: A false singleton (>=5, >=75% non-null), limited A null singleton allowed but **never changed**, B exclusively true payload (>=5), >=75% exact getter coverage on both native-data cohorts, zero other outcome/shape discrepancies, zero missing/unavailable data, API deopt required. Revalidate the evidence before each change; explicit A only; <=6 changes / 30s. FIRST_CONFIG remains strict. Test actual button rendering, no server action dispatched by module, crash/ANR/coexistence and live rollback. Keep Friends/avatars unsupported pending separate native data evidence.
+
+
+## P04 HF12 — limited minority-B outlier experimental trial
+
+Following on-device HF11 evidence, allow at most one B false/singleton result (<=5%) among an otherwise strongly positive B cohort. Maintain A false-only, null preservation, exact key/native data/deoptimization/scope and 6-call/30s limits; add hosted adversarial tests. Do not claim real Repost restored without successful physical proof.
