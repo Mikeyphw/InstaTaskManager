@@ -177,3 +177,8 @@ HF08 A/B captured the actual config-provider class `X.02nr` on both accounts. `c
   outcomes are observed and native Repost data is present. No autoplay,
   repost execution or account-specific persistence.
 - Hosted APK and Android 16/Vector physical qualification still required.
+
+
+## P04 HF11 — null-safe Repost-data Boolean experiment
+
+Source implemented; hosted/physical **pending**. HF10 report showed exact-key D3r difference (A 42 false + 7 null, B 31 true), with one unobserved A call and A03 present. Refine trial qualification only for exact DATA_ELIGIBILITY: A false singleton (>=5, >=75% non-null), limited A null singleton allowed but **never changed**, B exclusively true payload (>=5), >=75% exact getter coverage on both native-data cohorts, zero other outcome/shape discrepancies, zero missing/unavailable data, API deopt required. Revalidate the evidence before each change; explicit A only; <=6 changes / 30s. FIRST_CONFIG remains strict. Test actual button rendering, no server action dispatched by module, crash/ANR/coexistence and live rollback. Keep Friends/avatars unsupported pending separate native data evidence.

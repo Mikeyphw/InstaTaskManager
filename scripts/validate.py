@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 14' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.9-p04-hf10-real-data-gate'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 15' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.10-p04-hf11-nullable-data-gate'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 14' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 15' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -335,7 +335,7 @@ require('0x0081089a0045309dL' in predicate and '0xdf82522e' in predicate and
         'noteExactData(chain.getArg(0),original)' in module,
         'HF08 must use actual DEX callsite keys and original results')
 require('activeCohort!=0' in trial and 'P04BranchInputs.PRESENT' in trial and
-        'aF<3 || bT<3' in trial and 'LIMIT=6' in trial and
+        'aF<5 || bT<5' in trial and 'LIMIT=6' in trial and
         'DURATION_NS=30_000_000_000L' in trial and 'deoptimized' in trial,
         'HF08 trial must refuse without branch-evidence, and be time/quantity bounded')
 require('P04ExactGateTrial.disarm()' in trace and
@@ -368,7 +368,7 @@ require('bash scripts/p04-hf09-smoke.sh' in workflow and
         'HF09 tests/docs/CI absent')
 require('P04PredicateTrace.inRepostFrame()' in module and
         'static boolean inRepostFrame()' in predicate and
-        'return P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,' in predicate and
+        'P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,' in predicate and
         'if(frame==null || !(key instanceof Long)) return original;' in predicate,
         'HF09 exact-key and trial guard not preserved')
 print('ITM_P04_HF09_ACTUAL_X02NR_RECEIVER_CONTRACT_PASS')
@@ -391,3 +391,16 @@ require('bash scripts/p04-hf10-smoke.sh' in workflow and
     (ROOT/'scripts/P04HF10DataTargetSmoke.java').is_file(),
     'HF10 hosted regression missing')
 print('ITM_P04_HF10_REAL_DATA_GATE_CONTRACT_PASS')
+
+# HF11: strict-null-preserving exact-key data trial (guarded, opt-in only).
+trial11=(SOURCE/'P04ExactGateTrial.java').read_text()
+assert 'if(gate==DATA_ELIGIBILITY && a==0 && o==2 && st==0)continue;' in trial11
+assert 'if((long)aF*4L < (long)(aF+aNull)*3L)continue;' in trial11
+assert 'if(eligibleGate()!=armedGate){disarm();return original;}' in trial11
+assert 'gate!=armedGate || !Boolean.FALSE.equals(original)' in trial11
+assert 'if(!frame.changedByTrial)' in predicate and 'if(chosen!=original)frame.changedByTrial=true;' in predicate
+assert 'DURATION_NS=30_000_000_000L' in trial11 and 'LIMIT=6' in trial11
+assert 'bash scripts/p04-hf11-smoke.sh' in workflow
+assert (ROOT/'scripts/P04HF11NullableGateSmoke.java').is_file()
+assert (ROOT/'docs/P04_HF11_NULLABLE_DATA_GATE.md').is_file()
+print('ITM_P04_HF11_NULL_PRESERVATION_POLICY_AND_HOSTED_GATES_PASS')

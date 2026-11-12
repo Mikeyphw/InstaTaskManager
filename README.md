@@ -141,3 +141,8 @@ HF10 must pass hosted compilation and on-device capture before any UI benefit
 is claimed. Repost backend actions, Friends tab, and friend-avatar data remain
 unmodified. Install the exact-current successful PR APK with:
 `python3 InstaTaskManager_P04_HF10_Real_Repost_Data_Gate.zip install-latest`.
+
+
+## P04 HF11 — exact D3r false-only UI trial, nullable result preserved
+
+HF10 physical A/B report: A D3r original `false=42`, `null=7`, one unobserved; B `true=31`. Exact native A03 objects present throughout, runtime provider hook active. HF10's strict all-outcomes policy refused the 7 nullable values. HF11 allows **only** the repeated false-to-true branch when A is >=75% false among observed exact-key calls and observed coverage is >=75% of present native-data frames in both cohorts. A null is never coerced, rewritten, or counted as false; contradictions and missing data refuse. The local intervention is opt-in and retains 30 seconds / six changes / manual A only; does not grant backend permission or fabricate Repost payloads. See `docs/P04_HF11_NULLABLE_DATA_GATE.md`.

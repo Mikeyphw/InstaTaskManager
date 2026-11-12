@@ -13,7 +13,7 @@ public final class P04HF08GateSmoke {
         ok(P04ExactGateTrial.eligibleGate()<0,"no trial with deopt off");
         ok(P04ExactGateTrial.arm(0).startsWith("REFUSED"),"not armed before observing");
         P04ExactGateTrial.setDeoptimized(true);
-        for(int i=0;i<4;i++){
+        for(int i=0;i<6;i++){
             sample(0,0,1,0); // A false -> singleton
             sample(1,0,0,1); // B true -> payload
         }
@@ -28,15 +28,15 @@ public final class P04HF08GateSmoke {
         ok(Boolean.FALSE.equals(P04ExactGateTrial.maybeOverride(0,1,0,Boolean.FALSE)),"auto-off cap");
         ok(P04ExactGateTrial.status().startsWith("OFF"),"trial auto-disarmed");
         P04ExactGateTrial.reset();P04ExactGateTrial.setDeoptimized(true);
-        for(int i=0;i<4;i++){sample(0,0,1,0);sample(1,0,0,1);}
+        for(int i=0;i<6;i++){sample(0,0,1,0);sample(1,0,0,1);}
         sample(0,0,0,0); // mixed A outcomes
         ok(P04ExactGateTrial.eligibleGate()<0,"mixed refuses");
         P04ExactGateTrial.reset();P04ExactGateTrial.setDeoptimized(true);
-        for(int i=0;i<4;i++){sample(0,0,1,0);sample(1,0,0,1);}
+        for(int i=0;i<6;i++){sample(0,0,1,0);sample(1,0,0,1);}
         P04ExactGateTrial.recordFrame(0,P04BranchInputs.MISSING,new int[]{1,-1},0);
         ok(P04ExactGateTrial.eligibleGate()<0,"missing input refuses");
         P04ExactGateTrial.reset();P04ExactGateTrial.setDeoptimized(true);
-        for(int i=0;i<4;i++){sample(0,1,1,0);sample(1,1,0,1);}
+        for(int i=0;i<6;i++){sample(0,1,1,0);sample(1,1,0,1);}
         ok(P04ExactGateTrial.eligibleGate()==P04ExactGateTrial.DATA_ELIGIBILITY,"alternate exact gate allowed only after evidence");
         ok(!P04ExactGateTrial.report().contains("AccountId"),"no identifiers in report");
         ok(P04ExactGateTrial.report().contains("A03 Repost data"),"A03 stats visible");

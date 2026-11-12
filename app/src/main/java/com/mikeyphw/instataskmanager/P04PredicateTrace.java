@@ -49,6 +49,9 @@ final class P04PredicateTrace {
         final int[] factoryTypes = new int[MAX_FACTORY_ORDINAL];
         final String[] otherFactoryClasses = new String[MAX_FACTORY_ORDINAL];
         int nextFactory;
+        // Intervention-return frames are excluded from ORIGINAL A/B qualification:
+        // a successful false->true trial can turn singleton into payload.
+        boolean changedByTrial;
         Frame(int cohort, Frame parent, int inputPresence, int repostDataPresence) {
             this.cohort=cohort;
             this.parent=parent;
@@ -93,8 +96,10 @@ final class P04PredicateTrace {
         if(frame.exactGateOriginals[P04ExactGateTrial.FIRST_CONFIG]<0)
             frame.exactGateOriginals[P04ExactGateTrial.FIRST_CONFIG]=
                 P04ExactGateTrial.outcome(original);
-        return P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
+        Object chosen=P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
             P04ExactGateTrial.FIRST_CONFIG,original);
+        if(chosen!=original)frame.changedByTrial=true;
+        return chosen;
     }
     static Object noteExactData(Object key,Object original) {
         Frame frame=ACTIVE.get();
@@ -103,8 +108,10 @@ final class P04PredicateTrace {
         if(frame.exactGateOriginals[P04ExactGateTrial.DATA_ELIGIBILITY]<0)
             frame.exactGateOriginals[P04ExactGateTrial.DATA_ELIGIBILITY]=
                 P04ExactGateTrial.outcome(original);
-        return P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
+        Object chosen=P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
             P04ExactGateTrial.DATA_ELIGIBILITY,original);
+        if(chosen!=original)frame.changedByTrial=true;
+        return chosen;
     }
 
     /** Observes ONLY the Java class of a factory result already returned by IG.
@@ -140,8 +147,9 @@ final class P04PredicateTrace {
         if(ACTIVE.get()!=frame){ACTIVE.remove();return;} // fail closed on scope mismatch
         ACTIVE.set(frame.parent);
         int state=classify(originalResult);
-        P04ExactGateTrial.recordFrame(frame.cohort,frame.repostDataPresence,
-                                     frame.exactGateOriginals,state);
+        if(!frame.changedByTrial)
+            P04ExactGateTrial.recordFrame(frame.cohort,frame.repostDataPresence,
+                                         frame.exactGateOriginals,state);
         synchronized(P04PredicateTrace.class){
             if(FRAME_COUNTS[frame.cohort][state]>=MAX_FRAMES){DROPPED_FRAMES[frame.cohort][state]++;return;}
             FRAME_COUNTS[frame.cohort][state]++;
@@ -229,6 +237,7 @@ final class P04PredicateTrace {
                     }
             }
         }
+        out.append("HF11: intervention frames excluded from unmodified baseline eligibility evidence.\n");
         out.append(P04ExactGateTrial.report());
         out.append("HF07: X.01ym.A02 is the DEX-verified factory before the Repost BdA gate.\n")
            .append("Factory result classes are code metadata only; no configuration keys or values retained.\n")

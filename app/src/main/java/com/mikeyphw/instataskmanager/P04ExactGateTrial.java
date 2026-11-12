@@ -47,9 +47,15 @@ final class P04ExactGateTrial {
             if(v>=0 && v<OUTCOMES)counts[cohort][gate][v][terminal]++;
         }
     }
+    /**
+     * HF11: the exact IG455 D3r data gate is nullable. A null result is not
+     * FALSE, is never changed, and may coexist with a large, repeated false
+     * cohort. Qualify only the false branch, with explicit null and coverage
+     * bounds, an all-true B cohort, native data, and the original return shape.
+     * FIRST_CONFIG retains the original clean split requirement.
+     */
     static synchronized int eligibleGate() {
         if(!deoptimized) return -1;
-        // No missing data object in either cohort may be converted to a fake payload.
         if(presentCounts[0][P04BranchInputs.MISSING]!=0 ||
            presentCounts[1][P04BranchInputs.MISSING]!=0 ||
            presentCounts[0][P04BranchInputs.UNAVAILABLE]!=0 ||
@@ -57,13 +63,27 @@ final class P04ExactGateTrial {
         for(int gate=0;gate<GATES;gate++){
             int aF=counts[0][gate][1][0]; // A false -> native singleton
             int bT=counts[1][gate][0][1]; // B true -> native payload
-            if(aF<3 || bT<3)continue;
-            int rest=0;
+            if(aF<5 || bT<5)continue;
+            int aNull=gate==DATA_ELIGIBILITY?counts[0][gate][2][0]:0;
+            if(gate==DATA_ELIGIBILITY){
+                // A must be predominantly false, not mostly null (>=75%).
+                if((long)aF*4L < (long)(aF+aNull)*3L)continue;
+                // No large unobserved population: >=75% of native-data frames
+                // must contain this exact-key result, on BOTH accounts.
+                if((long)(aF+aNull)*4L <
+                        (long)presentCounts[0][P04BranchInputs.PRESENT]*3L ||
+                   (long)bT*4L <
+                        (long)presentCounts[1][P04BranchInputs.PRESENT]*3L)continue;
+            }
+            int mismatched=0;
             for(int a=0;a<2;a++)for(int o=0;o<OUTCOMES;o++)for(int st=0;st<3;st++){
                 if((a==0 && o==1 && st==0) || (a==1 && o==0 && st==1))continue;
-                rest+=counts[a][gate][o][st];
+                // Null in A is only permissible on the exact nullable D3r
+                // gate, and ONLY with the same singleton terminal state.
+                if(gate==DATA_ELIGIBILITY && a==0 && o==2 && st==0)continue;
+                mismatched+=counts[a][gate][o][st];
             }
-            if(rest==0) return gate;
+            if(mismatched==0)return gate;
         }
         return -1;
     }
@@ -85,8 +105,12 @@ final class P04ExactGateTrial {
         if(observedA==0 || observedB==0)
             return "No exact eligibility getter callbacks; factory dispatch may be different";
         int candidate=eligibleGate();
-        if(candidate>=0)return "Qualified "+LABELS[candidate]+"; Start A and press Try A UI gate";
-        return "A/B exact gate outcomes do not have a clean false→true split; no override";
+        if(candidate>=0){
+            if(candidate==DATA_ELIGIBILITY && counts[0][DATA_ELIGIBILITY][2][0]>0)
+                return "Qualified exact REPOST_DATA_BOOLEAN false-only trial; A null results will be preserved; Start A then Try A UI gate";
+            return "Qualified "+LABELS[candidate]+"; Start A and press Try A UI gate";
+        }
+        return "A/B exact gate is not qualified (requires A false with optional bounded null, B true, and native data); no override";
     }
     static synchronized String arm(int activeCohort) {
         disarm();
@@ -102,6 +126,9 @@ final class P04ExactGateTrial {
         if(armedGate<0 || System.nanoTime()>deadline || changed>=LIMIT){disarm();return original;}
         if(!deoptimized || cohort!=0 || dataPresence!=P04BranchInputs.PRESENT ||
                 gate!=armedGate || !Boolean.FALSE.equals(original))return original;
+        // A new contradiction or changed capture population immediately
+        // revokes qualification; never keep using stale A/B evidence.
+        if(eligibleGate()!=armedGate){disarm();return original;}
         changed++;
         if(changed>=LIMIT)disarm();
         return Boolean.TRUE;
@@ -133,6 +160,7 @@ final class P04ExactGateTrial {
                 out.append('\n');
             }
         }
+        out.append("HF11: nullable D3r trial qualifies only the false A branch; null stays native, B must be true, exact data required.\n");
         out.append("Eligible guarded trial: ")
            .append(eligibleGate()<0?"NO":LABELS[eligibleGate()])
            .append(" | Reason: ").append(reason())
