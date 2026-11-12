@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 13' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.8-p04-hf09-real-receiver'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 14' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.9-p04-hf10-real-data-gate'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 13' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 14' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -228,7 +228,7 @@ require(all(token in trace for token in ('mobileConfigMethod','nullableConfigMet
         'getDeclaredMethod("D3r",int.class)',
         'getDeclaredMethod("A04",session,String.class)', 'P04PredicateTrace.leave(frame,originalResult)')),
         'HF03 verified upstream signatures or enter/leave missing')
-require(all(token in module for token in ('hook(mobile)', 'hook(boxed)', 'hook(session)',
+require(all(token in module for token in ('hook(mobile)', 'maybeHookActualRepostData(', 'hook(session)',
         'P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original)',
         'P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original)',
         'P04PredicateTrace.note(P04PredicateTrace.SESSION_CHECK,original)',
@@ -307,7 +307,7 @@ require(all(x in factory for x in ('Class.forName("X.01ym"','Class.forName("X.06
 require('P04FactoryTarget.resolve(loader)' in module and
         'hook(factory)' in module and 'P04PredicateTrace.noteFactory(original)' in module and
         'appendUnavailable(missing,"FactoryDispatch",e)' in module and
-        'Repost A/B core (2/2)' in trace and 'optionalInstalled + "/4;' in trace,
+        'Repost A/B core (2/2)' in trace and 'optionalInstalled + "/3;' in trace,
         'HF07 optional factory hook must not block core capture')
 require('FACTORY_COUNTS' in predicate and 'frame.nextFactory++' in predicate and
         'ACTIVE.get()' in predicate and 'last_other_X_type=' in predicate and
@@ -372,3 +372,22 @@ require('P04PredicateTrace.inRepostFrame()' in module and
         'if(frame==null || !(key instanceof Long)) return original;' in predicate,
         'HF09 exact-key and trial guard not preserved')
 print('ITM_P04_HF09_ACTUAL_X02NR_RECEIVER_CONTRACT_PASS')
+
+# HF10: actual Repost-data D3r implementation, not a guessed provider class.
+actual_data=(SOURCE/'P04ActualDataTarget.java').read_text()
+require(all(q in actual_data for q in ('X.0Ie0', 'X.0FWn', 'X.0ApG',
+    'getDeclaredField("A03")', 'getDeclaredField("A01")',
+    'verifiedMethod', 'getMethod("D3r",int.class)',
+    'candidate.getReturnType()!=Boolean.class', 'Modifier.isAbstract(modifiers)')),
+    'HF10 exact Repost-data provider preflight missing')
+require('P04ActualDataTarget.preflight(loader)' in module and
+    'maybeHookActualRepostData(chain.getThisObject())' in module and
+    'itm-p04-hf10-repost-d3r-' in module and
+    'MAX_DATA_HOOKS = 3' in module and
+    'P04PredicateTrace.noteExactData(chain.getArg(0),original)' in module and
+    'return original;' in module and 'hook(boxed)' not in module,
+    'HF10 provider-specific bounded observer not installed')
+require('bash scripts/p04-hf10-smoke.sh' in workflow and
+    (ROOT/'scripts/P04HF10DataTargetSmoke.java').is_file(),
+    'HF10 hosted regression missing')
+print('ITM_P04_HF10_REAL_DATA_GATE_CONTRACT_PASS')

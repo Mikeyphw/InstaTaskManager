@@ -159,3 +159,21 @@ Keep Start/Stop independent of this fourth optional hook.
 ## P04 HF09 — Actual IG455 config provider (pre-hosted)
 
 HF08 A/B captured the actual config-provider class `X.02nr` on both accounts. `classes.dex` confirms exact public final `BdA(J)Z`. Replace speculative abstract `X.0T4C` observer with `X.02nr` and distinguish it in factory trace counts. Keep source pin, optional-hook independence, conservative A/B evidence gating and hosted-only Gradle.
+
+## P04 HF10 — actual Repost-data eligibility gate (2026-11-12)
+
+- HF09 confirmed the real `X.02nr` config hook, but **both** accounts get
+  `false` for the first MobileConfig predicate, with 3 vs 4 total calls.
+- In the exact IG455 `X.0Ie0.invoke()` selector-4 DEX false branch, the
+  `X.0FWn.A01` (`X.0ApG`) provider's `D3r(0xdf82522e)` boxed Boolean must
+  be `TRUE` to reach the continuation. The previous `X.02ib` hook was a
+  conjecture, with zero observed callbacks; do not infer its result.
+- HF10 discovers the actual runtime data-provider class from an existing
+  `A03` object, installs at most 3 concrete `D3r(int):Boolean` observers
+  asynchronously after the calling hook returns, and records only exact-key,
+  scoped Boolean outcomes. No account identities, object contents, or extra
+  method invocations are captured; no fabricated payload or server calls.
+- Keep the old trial fail-closed unless repeated actual A/B `false`/`true`
+  outcomes are observed and native Repost data is present. No autoplay,
+  repost execution or account-specific persistence.
+- Hosted APK and Android 16/Vector physical qualification still required.

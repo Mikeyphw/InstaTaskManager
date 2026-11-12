@@ -121,7 +121,7 @@ final class P04GateTrace {
         // Core state hooks are already installed, so allow A/B even if an
         // optional configuration observer is unavailable on this IG455 build.
         ready=true;
-        installStatus="READY: Repost A/B core (2/2), optional " + optionalInstalled + "/4; " +
+        installStatus="READY: Repost A/B core (2/2), optional " + optionalInstalled + "/3; " +
                 "HF09 X.02nr actual-config A/B read-only; HF07 factory-dispatch A/B read-only" +
                 (unavailable.isEmpty()?"":"; unavailable: "+unavailable);
     }
@@ -162,6 +162,7 @@ final class P04GateTrace {
     static String clear() {STATE.clear();P04PredicateTrace.clear();return "P04 capture cleared";}
     static String report() {
         return "P04 EXACT-APK A/B TRACE\nHook: "+status()+"\n"+STATE.render()
+            + InstaTaskModule.dataGateStatus() + "\n"
             + P04PredicateTrace.report()
             + "Repost experimental UI gate: " + P04ExactGateTrial.status() + "\n";
     }

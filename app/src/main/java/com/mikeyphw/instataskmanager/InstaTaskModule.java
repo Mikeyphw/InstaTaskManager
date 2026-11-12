@@ -3,6 +3,8 @@ package com.mikeyphw.instataskmanager;
 import android.app.Activity;
 import android.util.Log;
 import java.lang.reflect.Method;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedInterface;
@@ -13,6 +15,15 @@ public final class InstaTaskModule extends XposedModule {
     private String processName;
     private static volatile InstaTaskModule live;
     private final AtomicBoolean p04Scheduled = new AtomicBoolean(false);
+    // HF10: bounded, exact-APK, lazy receiver-specific D3r interception.
+    private volatile P04ActualDataTarget repostDataTarget;
+    private final Set<Method> hookedDataMethods = new HashSet<>();
+    private volatile int dataHookCount;
+    private volatile int dataHookSuccess;
+    private volatile int dataHookFailures;
+    private volatile int dataResolveMisses;
+    private static final int MAX_DATA_HOOKS = 3;
+
 
     /** Begins only after the user opens the Task Manager panel. */
     static void requestP04(Activity activity) {
@@ -56,6 +67,10 @@ public final class InstaTaskModule extends XposedModule {
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
                     P04PredicateTrace.Frame frame=P04GateTrace.enterUi(chain.getThisObject());
+                    if (frame != null) {
+                        try {maybeHookActualRepostData(chain.getThisObject());}
+                        catch (Throwable ignored) { /* optional only: preserve core capture */ }
+                    }
                     try {
                         Object resultValue=chain.proceed(); // ORIGINAL exactly once
                         P04GateTrace.leaveUi(frame,resultValue);
@@ -86,7 +101,14 @@ public final class InstaTaskModule extends XposedModule {
             P04GateTrace.setBranchInputs(null);
             appendUnavailable(missing,"RepostDataInput",e);
         }
-        // All four observer hooks are optional; A/B core remains available.
+        // HF10: capture the D3r receiver from the already-created native Repost
+        // data object. The old X.02ib guess missed it on both accounts.
+        try {repostDataTarget=P04ActualDataTarget.preflight(loader);}
+        catch (Throwable e) {
+            repostDataTarget=null;
+            appendUnavailable(missing,"ActualDataTarget",e);
+        }
+        // The remaining static observers are optional; core A/B stays available.
         // The exact static factory call executes before the BdA dispatch in
         // selector 4. It reveals the receiver CLASS only (never a config key).
         int optional=0;
@@ -121,21 +143,6 @@ public final class InstaTaskModule extends XposedModule {
             appendUnavailable(missing,"MobileConfig",e);
         }
         try {
-            Method boxed=P04GateTrace.nullableConfigMethod(loader);
-            hook(boxed).setId("itm-p04-hf03-config-nullable-boolean")
-                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
-                .intercept(chain -> {
-                    Object original=chain.proceed();
-                    try {
-                        P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original);
-                        return P04PredicateTrace.noteExactData(chain.getArg(0),original);
-                    } catch (Throwable ignored) {return original;}
-                });
-            optional++;
-        } catch (Throwable e) {
-            appendUnavailable(missing,"NullableConfig",e);
-        }
-        try {
             Method session=P04GateTrace.sessionCheckMethod(loader);
             hook(session).setId("itm-p04-hf03-session-boolean")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
@@ -159,6 +166,58 @@ public final class InstaTaskModule extends XposedModule {
         P04ExactGateTrial.setDeoptimized(deoptimized);
         P04GateTrace.installed(optional,missing.toString() +
             (deoptimized ? " | caller deopt=YES" : " | caller deopt=NO; trial disabled"));
+    }
+
+    /**
+     * Called only within the verified selector-4 original invocation and a
+     * user-started A/B recording. Installs at most 3 concrete methods. The
+     * observer must never change the original unless the already-guarded A-only
+     * exact-key UI trial has been explicitly armed from measured A/B evidence.
+     */
+    private synchronized void maybeHookActualRepostData(Object instance) {
+        P04ActualDataTarget resolver=repostDataTarget;
+        if(resolver==null || dataHookCount>=MAX_DATA_HOOKS)return;
+        Method method=resolver.resolve(instance);
+        if(method==null) {
+            if(dataResolveMisses<256)dataResolveMisses++;
+            return;
+        }
+        if(hookedDataMethods.contains(method))return;
+        // Claim first, before installation, to prevent re-entrant attempts.
+        hookedDataMethods.add(method);
+        final int ordinal=dataHookCount++;
+        // Defer hook installation until this original invocation returns.
+        // Avoid modifying ART hook tables while already inside its call chain.
+        Thread installer=new Thread(() -> {
+            try {
+                hook(method).setId("itm-p04-hf10-repost-d3r-"+ordinal)
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .intercept(chain -> {
+                        Object original=chain.proceed();
+                        if (!P04PredicateTrace.inRepostFrame())return original;
+                        try {
+                            P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original);
+                            return P04PredicateTrace.noteExactData(chain.getArg(0),original);
+                        } catch (Throwable ignored) { return original; }
+                    });
+                dataHookSuccess++;
+            } catch (Throwable ignored) {
+                dataHookFailures++;
+                // Do not retry a failing owner or affect core A/B capture.
+            }
+        },"ITM-HF10-d3r-hook-"+ordinal);
+        installer.setDaemon(true);
+        try {installer.start();}
+        catch (Throwable ignored) {dataHookFailures++;}
+    }
+
+    static String dataGateStatus() {
+        InstaTaskModule module=live;
+        if(module==null)return "HF10 native D3r receiver: not loaded";
+        return "HF10 native D3r receiver: attempts="+module.dataHookCount+
+               " active="+module.dataHookSuccess+" failures="+module.dataHookFailures+
+               " unresolved_samples="+module.dataResolveMisses+
+               " (max=3, exact key only)";
     }
 
     private static void appendUnavailable(StringBuilder details,String component,Throwable t) {

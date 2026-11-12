@@ -12,8 +12,9 @@ assert 'Modifier.isAbstract(m)' in c, 'abstract method must still be rejected'
 assert 'P04GateTrace.installed(optional,missing.toString()' in m
 assert m.index('hook(ui)') < m.index('hook(mobile)')
 assert m.index('hook(ufi)') < m.index('hook(mobile)')
-assert all(m.count(x)==1 for x in ('hook(ui)','hook(ufi)','hook(mobile)','hook(boxed)','hook(session)'))
-assert all('appendUnavailable(missing,"'+x+'",e)' in m for x in ('MobileConfig','NullableConfig','SessionCheck'))
+assert m.count('hook(boxed)')==0 and 'maybeHookActualRepostData(' in m
+assert all(m.count(x)==1 for x in ('hook(ui)','hook(ufi)','hook(mobile)','hook(session)'))
+assert all('appendUnavailable(missing,"'+x+'",e)' in m for x in ('MobileConfig','ActualDataTarget','SessionCheck'))
 assert 'ready=true;' in t and 'Repost A/B core (2/2)' in t
 assert 'REFUSED: core Repost capture hook unavailable' in m
 assert 'EXACT_APK_PASS' in m and m.index('verifyExactApk') < m.index('hook(ui)')

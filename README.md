@@ -125,3 +125,19 @@ No account identities, media IDs, configuration keys or strings are exported. No
 ### P04 HF09 actual runtime config receiver
 
 HF08 discovered `X.02nr` as the concrete provider returned by the verified Repost config factory on both accounts. HF09 hooks its bytecode-verified `BdA(J)Z` only during explicit A/B selector-4 tracing; report includes a named `X.02nr` category and actual Boolean aggregate. See `docs/P04_HF09_ACTUAL_RUNTIME_RECEIVER.md`.
+
+## P04 HF10 — exact Repost-data gate (source candidate)
+
+A/B capture proved `FIRST_MOBILE_CONFIG=false` for both accounts; the full IG455
+selector-4 bytecode takes the false branch and then checks
+`X.0FWn.A01 (X.0ApG).D3r(0xdf82522e): Boolean`. Previous instrumentation
+assumed `X.02ib`, but the installed hook did not observe that receiver.
+HF10 resolves the *actual* D3r method from the already-created Repost-data
+object, without invoking its getter, and asynchronously hooks at most three
+concrete methods. Original values are preserved unless the existing explicit,
+A-only, exact-key, strictly qualified, six-result/30-second trial is armed.
+A/B core remains usable if this optional observer cannot be installed.
+HF10 must pass hosted compilation and on-device capture before any UI benefit
+is claimed. Repost backend actions, Friends tab, and friend-avatar data remain
+unmodified. Install the exact-current successful PR APK with:
+`python3 InstaTaskManager_P04_HF10_Real_Repost_Data_Gate.zip install-latest`.
