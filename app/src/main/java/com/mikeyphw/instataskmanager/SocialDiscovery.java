@@ -125,7 +125,7 @@ final class SocialDiscovery {
               .append("InstaEclipse Disable repost must be OFF for native repost actions.\n")
               .append("A hidden button may require account/server eligibility.\n")
               .append("Empty social data cannot be turned into real friend avatars.\n")
-              .append("No visibility or action overrides are installed.\n")
+              .append("The IG455 Scan is read-only; HF08 has a separate opt-in, bounded UI gate trial. No native repost action is dispatched by this scan.\n")
               .append("No usernames, IDs, Media values or URLs collected.");
         return report.toString();
     }

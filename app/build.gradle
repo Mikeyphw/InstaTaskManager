@@ -8,8 +8,8 @@ android {
         applicationId 'com.mikeyphw.instataskmanager'
         minSdk 28
         targetSdk 35
-        versionCode 4
-        versionName '0.4.0-p03-low-overhead-social-requests'
+        versionCode 17
+        versionName '0.6.12-p04-hf13-native-reels-recovery'
     }
     buildTypes {
         debug { minifyEnabled false }

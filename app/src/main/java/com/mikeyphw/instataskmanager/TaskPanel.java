@@ -34,13 +34,17 @@ final class TaskPanel {
 
     private final Activity activity;
     private final ViewGroup decor;
-    private TextView chip, content;
+    private TextView chip, content, captureBanner;
+    private Runnable captureTicker;
+    private boolean lastP04Ready;
     private Button exportButton;
     private volatile boolean exporting;
     private LinearLayout panel, controlsBar, scrollBody, socialSwitches;
+    private TextView hf13Status;
     private final NativeRepostRecovery nativeRecovery = new NativeRepostRecovery();
     private boolean socialExactVerified;
     private String nativeTrial = "No manual native-view attempt yet.";
+    private String p04Action = "Capture disabled until P04 hook installation succeeds.";
     private HandlerThread thread;
     private Handler worker;
     private volatile boolean sampling;
@@ -65,6 +69,7 @@ final class TaskPanel {
         TaskPanel t = new TaskPanel(activity, (ViewGroup) activity.getWindow().getDecorView());
         current = t;
         t.addChip();
+        t.startCaptureTicker();
     }
 
     static void onLeaving(Activity activity) {
@@ -122,6 +127,53 @@ final class TaskPanel {
 
     private void toggle() { if (panel != null) closePanel(); else openPanel(); }
 
+    /** Updates only two TextViews once a second: no extra profiler or APK scans. */
+    private void startCaptureTicker() {
+        lastP04Ready=P04GateTrace.ready();
+        captureTicker=new Runnable() {
+            @Override public void run() {
+                if (current != TaskPanel.this || activity.isFinishing() || activity.isDestroyed()) return;
+                refreshCaptureFeedback();
+                if (panel != null && "social".equals(tab) && content != null)
+                    renderSocialContent();
+                boolean newReady=P04GateTrace.ready();
+                if (panel != null && "social".equals(tab) && lastP04Ready != newReady)
+                    update(); // enable Start A/B when APK verification finishes
+                lastP04Ready=newReady;
+                MAIN.postDelayed(this,1000);
+            }
+        };
+        refreshCaptureFeedback();
+        MAIN.postDelayed(captureTicker,1000);
+    }
+
+    private void refreshCaptureFeedback() {
+        int active=P04GateTrace.activeIndex();
+        String line=P04GateTrace.feedback();
+        if (hf13Status != null && panel != null && "social".equals(tab))
+            hf13Status.setText("HF13 native Repost UI: "+P04HF13Recovery.status()+
+                "\nFresh native gate: "+
+                (P04ExactGateTrial.eligibleForHF13Recovery()?"READY":"NOT QUALIFIED")+
+                ". Reels tab only (manual); post Reels/feed unverified.");
+        if (captureBanner != null) {
+            captureBanner.setText(line);
+            captureBanner.setTextColor(active >= 0 ? ACCENT : FOREGROUND);
+        }
+        if (chip != null) {
+            boolean trialOn=P04HF13Recovery.isEnabled();
+            chip.setText(trialOn ? "⚡ A" : active == 0 ? "● A" : active == 1 ? "● B" : "TM");
+            chip.setTextColor(active >= 0 ? ACCENT : FOREGROUND);
+            chip.setContentDescription(active < 0
+                    ? "Instagram Task Manager — open performance panel"
+                    : "Task Manager recording account " + (active==0 ? "A" : "B") + " — tap to open");
+        }
+    }
+
+    private void actionToast(String message) {
+        String text=message.length()>120 ? message.substring(0,120) : message;
+        Toast.makeText(activity.getApplicationContext(),text,Toast.LENGTH_SHORT).show();
+    }
+
     private TextView txt(String s, int size, boolean bold) {
         TextView t = new TextView(activity);
         t.setText(s); t.setTextColor(FOREGROUND); t.setTextSize(size);
@@ -131,6 +183,7 @@ final class TaskPanel {
 
     private void openPanel() {
         if (panel != null || activity.isFinishing() || activity.isDestroyed()) return;
+        InstaTaskModule.requestP04(activity); // background hash + guarded passive hooks
         panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(dp(10), dp(9), dp(10), dp(8));
@@ -155,6 +208,11 @@ final class TaskPanel {
         Button close=button("×",()->closePanel());
         header.addView(close,new LinearLayout.LayoutParams(dp(45),dp(40)));
         panel.addView(header);
+        captureBanner=txt("P04 · VERIFYING",12,true);
+        captureBanner.setPadding(dp(6),dp(6),dp(6),dp(6));
+        captureBanner.setBackground(background(Color.rgb(34,45,58),7,Color.rgb(58,79,94)));
+        panel.addView(captureBanner);
+        refreshCaptureFeedback();
 
         // Allows repositioning while leaving the surrounding Instagram screen usable.
         header.setOnTouchListener(new View.OnTouchListener(){
@@ -231,6 +289,7 @@ final class TaskPanel {
         if (worker == null || !sampling || socialScanning) return;
         socialScanning = true;
         socialReport = "Checking installed IG455 APK hash and method shapes…\nNo Instagram methods will be called.";
+        actionToast("IG455 scan started");
         update();
         worker.post(() -> {
             String result;
@@ -247,6 +306,7 @@ final class TaskPanel {
                     socialExactVerified = display.contains("EXACT IG455 APK SHA256 + size: MATCH")
                             && display.contains("Matched structures: 9 / 9 | ambiguous: 0 | unavailable: 0");
                     socialReport = display;
+                    actionToast(socialExactVerified ? "IG455 scan complete: 9/9 structures" : "IG455 scan stopped or unavailable");
                     if ("social".equals(tab)) update();
                 }
             });
@@ -263,11 +323,16 @@ final class TaskPanel {
         final String socialAtExport = (socialScanning
                 ? "Scan currently running; no finished results available."
                 : socialReport) + "\n\n" + SocialFeatureSettings.report(activity)
-                + "\n" + nativeTrial;
+                + "\n" + nativeTrial + "\n\nCAPTURE STATUS: " +
+                P04GateTrace.feedback() + "\n" + P04GateTrace.report();
         final String overview = overviewText(captured);
         final String threads = threadsText(captured);
         exporting = true;
-        if (exportButton != null) exportButton.setEnabled(false);
+        if (exportButton != null) {
+            exportButton.setText("Saving…");
+            exportButton.setEnabled(false);
+        }
+        actionToast("Saving diagnostics to Downloads…");
         final android.content.Context app = activity.getApplicationContext();
         worker.post(() -> {
             String location = null;
@@ -282,7 +347,10 @@ final class TaskPanel {
             final String success = location;
             MAIN.post(() -> {
                 exporting = false;
-                if (exportButton != null) exportButton.setEnabled(true);
+                if (exportButton != null) {
+                    exportButton.setText("Export");
+                    exportButton.setEnabled(true);
+                }
                 Toast.makeText(app, success != null
                         ? "SUCCESS: " + success
                         : "FAILURE: Could not export report to Downloads", Toast.LENGTH_LONG).show();
@@ -354,14 +422,7 @@ final class TaskPanel {
         }
         if("components".equals(tab)) { content.setText(components==null?"Inspecting…":components); return; }
         if("social".equals(tab)) {
-            content.setText("SOCIAL DISCOVERY — IG455\n\n" + socialReport + "\n\n" +
-                "REQUESTED TOGGLES · EXPERIMENTAL\n" +
-                "These switches save your preference; they do not override server permission.\n" +
-                "Repost: after an exact scan, Try native Repost only reveals an EXISTING " +
-                "hidden clickable native View labelled Repost. Most Instagram views may not qualify.\n" +
-                "Friend avatars: no verified safe native presentation gate, so requests are " +
-                "PENDING and do NOT yet alter Instagram.\n" + nativeTrial + "\n\n" +
-                "Disable repost in InstaEclipse must be OFF. No synthetic repost/like data.");
+            renderSocialContent();
             return;
         }
         if("controls".equals(tab)) {
@@ -382,6 +443,22 @@ final class TaskPanel {
         if("overview".equals(tab)) content.setText(overviewText(snapshot));
         else content.setText(threadsText(snapshot));
     }
+
+    private void renderSocialContent() {
+        if (content == null || !"social".equals(tab)) return;
+        content.setText("SOCIAL DISCOVERY — IG455\n\n" + socialReport + "\n\n" +
+                "P04 ACCOUNT A/B READ-ONLY TRACE\n" + p04Action + "\n" +
+                P04GateTrace.report() + "\n" +
+                "REQUESTED TOGGLES · EXPERIMENTAL\n" +
+                "These switches save your preference; they do not override server permission.\n" +
+                "Repost: after an exact scan, Try native Repost only reveals an EXISTING " +
+                "hidden clickable native View labelled Repost. Most Instagram views may not qualify.\n" +
+                "Friend avatars: no verified safe native presentation gate, so requests are " +
+                "PENDING and do NOT yet alter Instagram.\n" +
+                "HF08: Repost gate trial changes at most 6 exact local UI Boolean outcomes, only after confirmed A/B split and native Repost data present.\n" +
+                nativeTrial + "\n\n" +
+                "Disable repost in InstaEclipse must be OFF. No synthetic repost/like data.");
+        }
 
     private static String overviewText(ProfilerSampler.Snapshot s) {
         if(s==null) return "Waiting for first sample…";
@@ -445,10 +522,89 @@ final class TaskPanel {
             });
             socialSwitches.addView(box);
         }
+        TextView p04Title=txt("P04 · Compare full Instagram account A and B (no IDs)",11,true);
+        socialSwitches.addView(p04Title);
+        LinearLayout p04row=new LinearLayout(activity);
+        Button a=button("Start A",()->p04Start(0));
+        Button b=button("Start B",()->p04Start(1));
+                Button stop=button("Stop",()->{
+                    p04Action=P04GateTrace.stop();
+                    actionToast(p04Action);
+                    refreshCaptureFeedback();
+                    update();
+                });
+        int recording=P04GateTrace.activeIndex();
+        a.setEnabled(P04GateTrace.ready() && recording < 0);
+        b.setEnabled(P04GateTrace.ready() && recording < 0);
+        stop.setEnabled(recording >= 0);
+        if (recording==0) a.setText("● A recording");
+        if (recording==1) b.setText("● B recording");
+        p04row.addView(a,new LinearLayout.LayoutParams(0,dp(42),1));
+        p04row.addView(b,new LinearLayout.LayoutParams(0,dp(42),1));
+        p04row.addView(stop,new LinearLayout.LayoutParams(0,dp(42),1));
+        socialSwitches.addView(p04row);
+        LinearLayout p04row2=new LinearLayout(activity);
+        Button inspect=button("Count UI labels",()->{
+            p04Action=P04GateTrace.countVisibleLabels(activity,panel,chip);
+            actionToast(p04Action);
+            update();
+        });
+        Button clear=button("Clear A/B",()->{
+            p04Action=P04GateTrace.clear();
+            actionToast(p04Action);
+            refreshCaptureFeedback();
+            update();
+        });
+        p04row2.addView(inspect,new LinearLayout.LayoutParams(0,dp(42),1));
+        p04row2.addView(clear,new LinearLayout.LayoutParams(0,dp(42),1));
+        socialSwitches.addView(p04row2);
+        LinearLayout gateRow=new LinearLayout(activity);
+        Button gate=button("Enable Repost · Reels tab",()->{
+            p04Action=P04GateTrace.armHF13Recovery();
+            actionToast(p04Action);
+            refreshCaptureFeedback();
+            update();
+        });
+        // Keep clickable in A to explain WHY the local experiment is refused.
+        gate.setEnabled(P04GateTrace.ready() && recording==0);
+        Button gateOff=button("Recovery OFF",()->{
+            p04Action=P04GateTrace.stopExactTrial();
+            actionToast(p04Action);
+            refreshCaptureFeedback();
+            update();
+        });
+        gateRow.addView(gate,new LinearLayout.LayoutParams(0,dp(42),1));
+        gateRow.addView(gateOff,new LinearLayout.LayoutParams(0,dp(42),1));
+        socialSwitches.addView(gateRow);
+        TextView trialStatus=txt("HF13 native Repost UI: "+P04HF13Recovery.status()+
+            "; exact eligibility="+(P04ExactGateTrial.eligibleGate()<0 ? "NOT PROVEN":
+            P04ExactGateTrial.LABELS[P04ExactGateTrial.eligibleGate()])+". " +
+            "No fake media or social data; no automatic reposts.",11,false);
+        hf13Status=trialStatus;
+        socialSwitches.addView(trialStatus);
+        TextView p04Help=txt("HF13 RECOVERY — manually opt in ONLY when Account A is " +
+                "open in the dedicated Reels tab. Start A recording, then tap Enable Repost. " +
+                "An existing qualified HF12 A/B baseline and live D3r receiver are mandatory. " +
+                "Up to 64 exact false-to-true UI checks can run for 90 seconds; re-arm manually. " +
+                "Tap Recovery OFF before switching accounts, navigating elsewhere, or testing other posts. " +
+                "Activity exit/recording change/restart automatically turns recovery OFF, but a " +
+                "same-Activity account or tab switch cannot yet be recognized reliably. " +
+                "Reels displayed as posts and ordinary feed posts are NOT QUALIFIED; do not enable there. " +
+                "Null, true, other config keys, clicks, backend and social data remain native. " +
+                "Disable restores future predicate results immediately; already-rendered UI " +
+                "may need to refresh or Instagram restart. InstaEclipse Disable Repost must be OFF.",11,false);
+        socialSwitches.addView(p04Help);
         TextView status = txt("OFF by default. Avatar switches are requested-only; " +
                 "no avatar hooks are installed.\nManual Repost trials require a successful " +
                 "IG455 scan; no action is performed automatically.",11,false);
         socialSwitches.addView(status);
+    }
+
+    private void p04Start(int accountIndex) {
+        p04Action=P04GateTrace.begin(accountIndex);
+        actionToast(p04Action);
+        refreshCaptureFeedback();
+        update();
     }
 
     private void tryNativeRepost() {
@@ -461,17 +617,21 @@ final class TaskPanel {
             // No method invocation or network request occurs.
             nativeTrial = nativeRecovery.tryExisting(decor);
         }
+        actionToast(nativeTrial);
         update();
     }
 
     private void closePanel() {
         stopSampler();
         socialExactVerified = false;
-        if(panel!=null){decor.removeView(panel);panel=null;content=null;controlsBar=null;exportButton=null;socialSwitches=null;scrollBody=null;}
+        if(panel!=null){decor.removeView(panel);panel=null;content=null;captureBanner=null;controlsBar=null;exportButton=null;socialSwitches=null;scrollBody=null;hf13Status=null;}
+        refreshCaptureFeedback();
         if(chip!=null) chip.setVisibility(View.VISIBLE);
     }
 
     private void dispose() {
+        if (captureTicker != null) MAIN.removeCallbacks(captureTicker);
+        captureTicker=null;
         nativeRecovery.restore();
         closePanel();
         if(chip!=null){decor.removeView(chip);chip=null;}

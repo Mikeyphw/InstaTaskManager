@@ -78,3 +78,118 @@
 - Friend-avatar toggles record user intent only; **not active hooks**. Exact data
   and presentation suppression remain unverified.
 - Requires hosted CI and physical device qualification; no automatic merge.
+
+## P04 — IG455 account A/B gate trace and narrowly guarded scalar trial (2026-11-11)
+
+Status: LOCAL SOURCE + JAVA SMOKE; HOSTED CI AND PHYSICAL VALIDATION PENDING.
+Base: P03 HF01 commit `2423c2f76c8e55e914d24e9b2a829ee29da08fe4`.
+Stacked PR P04 must target P03 PR #2 branch; no merge or force-push.
+
+- In full Instagram 455, affected account misses Repost, Friends tab, and friend bubbles on multiple devices, but successfully reposts via Instagram Lite; another full-app account has features. This indicates account-by-client differences rather than universal repost backend rejection.
+- Exact APK hash/byte length + two DEX-verified multi-purpose method descriptors are checked before passive hooks. `$t=4` in `X.0Ie0.invoke()` corresponds to Repost UI-state/eligibility traces. `$t=11/12` in `X.0F2B.invoke(Object)` corresponds to Repost UFI traces. All three selectors are diagnostic candidates, not proven unique eligibility predicates.
+- Manual Account A/B captures count Boolean/null/object results without retaining identifiers, arguments, or result content. Transient label checks count only exact `Repost`/`Friends` words in visible native views, excluding the module panel; absence is not proof of absence in Litho or other rendering systems.
+- The only active trial requires >=3 pure Boolean `false` results on A and >=3 pure Boolean `true` results on B from exact selector 4, manual A selected, and a separate explicit user action. It can replace at most eight scalar `false` values in the running process. It is off on startup, Stop, switching cohorts, or Clear. It does not force any complex UI state or social-data lists.
+- Follow up only after exported A/B report: identify actual UI state field and Friends-tab/social-context data gate, then add verified, reversible presentation-only controls. Do not infer server eligibility or manufacture friend data.
+
+## P04 HF01: Capture feedback
+
+- Add a persistent trace state banner and minimized chip status, live A/B elapsed timer and gate-event counter.
+- Surface Android hook verification outcomes without restarting the panel.
+- Keep user-visible feedback for Start/Stop, UI label count, scan and export.
+- Count-only A/B observers and bounded Boolean trial remain unchanged.
+
+
+## P04 HF02 — variant-aware A/B trace + CI de-duplication
+- Exact 455 DEX result pair classification for selector 4 and 11 (singleton vs payload, primitive aggregate counts, raw references never exported).
+- PR-only CI for feature branches, push CI for main; concurrency cancels stale runs; artifact name uses source PR head SHA.
+- Next: physical device compare A/B, isolate selector state-creation predicate, then only consider a reversible native UI visibility hook on a verified gate.
+
+
+## P04 HF03 upstream primitive trace (2026-11-11)
+Read-only, exact-IG455, selector-4-local upstream Boolean instrumentation. Retired Boolean force-enable trial because A/B evidence is non-Boolean. Next: compare A/B guarded primitive call paths; only consider an explicitly reversible override after the actual failed predicate and its semantics are verified. CI remains PR-only for feature branches.
+
+## P04 HF04 · Repost early-branch input presence (diagnostic)
+Trace exact `X.0Ie0.A02 → X.07XN.A0u` null/present categories per cohort and returned variant, without reading content or modifying Instagram. Only if missing input differs identify why; do not manufacture repost UI payloads.
+
+
+## P04 HF05 — concrete MobileConfig dispatch target (read-only)
+
+- HF04 A/B ruled out the `A0u-null` early return: both accounts had `A0u-present`
+  on every sampled call, but A still returned singleton Repost UI state.
+- Exact IG455 APK SHA256 was reverified and DEX class hierarchy inspected.
+  `X.01ym.A02` returns `X.0mMk`. Concrete `X.0T4C` declares
+  `BdA(long):boolean` and implements `X.0mMk` plus
+  `MobileConfigUnsafeContext`; the previous `X.02ja` target does not match
+  that type path and produced no observations.
+- HF05 switches only the concrete MobileConfig observer. Original return
+  values are preserved, and account identifiers, keys, args and payloads
+  remain unobserved. Counters are correlated to original Repost states.
+- Qualification: on-device Account A/B recording must show whether the first
+  config Boolean differs; zero observations mean instrumentation mismatch,
+  not a false gate. Do not force eligibility until it is proven.
+- CI is single PR-triggered hosted Gradle; after success run the ZIP
+  `install-latest` action to install the artifact matching **current PR HEAD**.
+  The installer SHA-verifies before clean uninstall/install and reports scope reset.
+
+
+## P04 HF06 — restore Start A/B capture after HF05 method-shape refusal
+
+Exact IG455 DEX verified: abstract `X.0T4C` declares concrete `BdA(J)Z`; remove incorrect abstract-owner rejection, retain strict concrete method checks. Install core two A/B hooks independently of optional predicate observers; display partial readiness/error per observer, preserve exported A/B counts and privacy. One PR-only CI run and exact-head successful APK installer. Hosted and physical-device validation required.
+
+
+## P04 HF07 — actual MobileConfig factory recipient (read-only)
+
+HF06 on-device READY core 2/2 and optional 3/3; A=42/42 singleton,
+B=54/54 payload, A0u-present across both cohorts. Neither cohort
+produced MobileConfig getter observations inside selector 4.
+
+Static exact IG455 DEX shows the factory `X.01ym.A02(X.06g8,Z):X.0mMk`
+is called before `BdA(J):Z`. HF07 observes only the returned Java class
+metadata within selector-4 frames (up to two factory calls per frame).
+No config arguments or values, account/media content, or overrides.
+Keep Start/Stop independent of this fourth optional hook.
+
+## P04 HF08 — Exact selector-4 branches and opt-in trial (source built; hosted/runtime pending)
+- Re-audited IG455 DEX branch: A0u check alone does not establish native Repost eligibility; A03 native Repost data object presence is a prerequisite; data gate `X.0ApG.D3r(I)` and first MobileConfig `BdA(J)` have **distinct exact callsite keys**.
+- Scope deoptimization to `X.0Ie0.invoke()` (libxposed API 102) to counter ART inlining of the tiny getter hooks; report failure without disabling A/B core.
+- A/B counts of original key-specific Boolean outcomes against singleton/payload state and A03 presence; never export keys, account/media contents or URLs.
+- Opt-in A-only, six-result/30-second local Boolean trial strictly after 3+/3+ consistent A(false/singleton)/B(true/payload) observations and all A03 present; otherwise explicit refusal; no native object copying or network/action hooks.
+- Ship consolidated HF07+HF08 from successful HF06 PR #3 source pin with Python ZIP installer. Require hosted CI, physical A/B and native action acceptance before claiming restored Repost.
+
+## P04 HF09 — Actual IG455 config provider (pre-hosted)
+
+HF08 A/B captured the actual config-provider class `X.02nr` on both accounts. `classes.dex` confirms exact public final `BdA(J)Z`. Replace speculative abstract `X.0T4C` observer with `X.02nr` and distinguish it in factory trace counts. Keep source pin, optional-hook independence, conservative A/B evidence gating and hosted-only Gradle.
+
+## P04 HF10 — actual Repost-data eligibility gate (2026-11-12)
+
+- HF09 confirmed the real `X.02nr` config hook, but **both** accounts get
+  `false` for the first MobileConfig predicate, with 3 vs 4 total calls.
+- In the exact IG455 `X.0Ie0.invoke()` selector-4 DEX false branch, the
+  `X.0FWn.A01` (`X.0ApG`) provider's `D3r(0xdf82522e)` boxed Boolean must
+  be `TRUE` to reach the continuation. The previous `X.02ib` hook was a
+  conjecture, with zero observed callbacks; do not infer its result.
+- HF10 discovers the actual runtime data-provider class from an existing
+  `A03` object, installs at most 3 concrete `D3r(int):Boolean` observers
+  asynchronously after the calling hook returns, and records only exact-key,
+  scoped Boolean outcomes. No account identities, object contents, or extra
+  method invocations are captured; no fabricated payload or server calls.
+- Keep the old trial fail-closed unless repeated actual A/B `false`/`true`
+  outcomes are observed and native Repost data is present. No autoplay,
+  repost execution or account-specific persistence.
+- Hosted APK and Android 16/Vector physical qualification still required.
+
+
+## P04 HF11 — null-safe Repost-data Boolean experiment
+
+Source implemented; hosted/physical **pending**. HF10 report showed exact-key D3r difference (A 42 false + 7 null, B 31 true), with one unobserved A call and A03 present. Refine trial qualification only for exact DATA_ELIGIBILITY: A false singleton (>=5, >=75% non-null), limited A null singleton allowed but **never changed**, B exclusively true payload (>=5), >=75% exact getter coverage on both native-data cohorts, zero other outcome/shape discrepancies, zero missing/unavailable data, API deopt required. Revalidate the evidence before each change; explicit A only; <=6 changes / 30s. FIRST_CONFIG remains strict. Test actual button rendering, no server action dispatched by module, crash/ANR/coexistence and live rollback. Keep Friends/avatars unsupported pending separate native data evidence.
+
+
+## P04 HF12 — limited minority-B outlier experimental trial
+
+Following on-device HF11 evidence, allow at most one B false/singleton result (<=5%) among an otherwise strongly positive B cohort. Maintain A false-only, null preservation, exact key/native data/deoptimization/scope and 6-call/30s limits; add hosted adversarial tests. Do not claim real Repost restored without successful physical proof.
+
+## P04 HF13 — native Reels-tab Repost recovery (implemented source; physical acceptance pending)
+
+See [P04_HF13_NATIVE_REELS_RECOVERY.md](P04_HF13_NATIVE_REELS_RECOVERY.md). HF12 demonstrated native Repost on one Reels-tab Reel; HF13 provides time-bounded manual opt-in with explicit OFF. Reels displayed as posts and ordinary feed posts remain **unverified**, not supported. Account identity is unbound: no persistent toggle until safe session binding exists.
+
+Next: HF14 independent Feed/post-Reels proof and native UI fidelity; HF15 friends/avatars only if genuinely backed by native social data. All earlier P00–P05 and social roadmaps remain in force.

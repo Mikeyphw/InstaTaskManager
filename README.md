@@ -83,3 +83,71 @@ branch and server payload behavior can be tested safely. Set InstaEclipse's
 The single consolidated bootstrap ZIP supports fresh installation and an
 **exact-original-P00** project upgrade; it refuses to clobber modified P00
 files and does not interact with Git remotes or the device.
+
+## P04 HF04 early-branch input presence
+Read-only exact-IG455 A/B diagnostic correlating `A02/A0u` nullness with original Repost UI state, guarding public field shapes and exporting counts only. No account/media references or return-value mutation.
+
+
+## P04 HF05 — concrete MobileConfig target and install helper
+
+The prior `X.02ja.BdA(long)` target is replaced by bytecode-verified
+`X.0T4C.BdA(long)` (a concrete receiver implementing both the MobileConfig
+interface and `X.0mMk`, returned by the Repost branch factory). This is a
+passive observer; return values and account/session data are untouched.
+
+The self-executing overlay now has an `install-latest` command to download the
+newest **successful CI APK for the exact current PR head**, verify its SHA256,
+and cleanly uninstall the previous debug APK (if installed) before installing.
+The uninstall resets module preferences and Vector/LSPosed scope. The helper refuses
+if PR #3 has no successful build at its current SHA.
+
+
+### P04 HF06 — Start buttons repair
+
+Repairs the HF05 false NoSuchMethodException on IG455 abstract owner `X.0T4C` with a concrete `BdA(J)Z` method; optional upstream observers now fail independently of the two core A/B trace hooks. See `docs/P04_HF06_START_CONTROLS_REPAIR.md`.
+
+
+## P04 HF07 — Repost configuration factory trace
+
+HF06 qualified the capture UI on device. HF07 adds read-only, selector-4
+scoped counts of the concrete provider class returned by the exact IG455
+`X.01ym.A02` static configuration factory. It is an optional observer:
+A/B Start still works if unavailable. Output never contains account IDs,
+config keys, post data, or returned object content. See
+`docs/P04_HF07_FACTORY_DISPATCH.md`.
+
+## P04 HF08 — Why the previous trace was silent, and the guarded UI test
+
+After HF06's physical A/B captures, we revisited the **actual IG455 DEX** rather than assuming a receiver class or a single eligibility flag. The Repost selector-4 path requires both A0u and `X.0Ie0.A03` (native Repost data), and uses separate MobileConfig and nullable data-gate checks. The P04 HF07 configuration factory observer is included; HF08 adds caller-specific libxposed API102 `deoptimize` to address possible ART-inlined getter callbacks, exact-key aggregate A/B outcomes, A03 presence, and a default-OFF, bounded opt-in Repost **UI-only** Boolean trial if the same exact gate differs 3+/3+ times A/B.
+
+No account identities, media IDs, configuration keys or strings are exported. No friend-avatar presentation or backend repost-action permission is forced. The source and JVM tests do not imply an on-device fix; see `docs/P04_HF08_EXACT_BRANCH_DEOPT_GUARDED_UI_TRIAL.md` for exact DEX evidence, limitations, rollback and acceptance sequence.
+
+### P04 HF09 actual runtime config receiver
+
+HF08 discovered `X.02nr` as the concrete provider returned by the verified Repost config factory on both accounts. HF09 hooks its bytecode-verified `BdA(J)Z` only during explicit A/B selector-4 tracing; report includes a named `X.02nr` category and actual Boolean aggregate. See `docs/P04_HF09_ACTUAL_RUNTIME_RECEIVER.md`.
+
+## P04 HF10 — exact Repost-data gate (source candidate)
+
+A/B capture proved `FIRST_MOBILE_CONFIG=false` for both accounts; the full IG455
+selector-4 bytecode takes the false branch and then checks
+`X.0FWn.A01 (X.0ApG).D3r(0xdf82522e): Boolean`. Previous instrumentation
+assumed `X.02ib`, but the installed hook did not observe that receiver.
+HF10 resolves the *actual* D3r method from the already-created Repost-data
+object, without invoking its getter, and asynchronously hooks at most three
+concrete methods. Original values are preserved unless the existing explicit,
+A-only, exact-key, strictly qualified, six-result/30-second trial is armed.
+A/B core remains usable if this optional observer cannot be installed.
+HF10 must pass hosted compilation and on-device capture before any UI benefit
+is claimed. Repost backend actions, Friends tab, and friend-avatar data remain
+unmodified. Install the exact-current successful PR APK with:
+`python3 InstaTaskManager_P04_HF10_Real_Repost_Data_Gate.zip install-latest`.
+
+
+## P04 HF11 — exact D3r false-only UI trial, nullable result preserved
+
+HF10 physical A/B report: A D3r original `false=42`, `null=7`, one unobserved; B `true=31`. Exact native A03 objects present throughout, runtime provider hook active. HF10's strict all-outcomes policy refused the 7 nullable values. HF11 allows **only** the repeated false-to-true branch when A is >=75% false among observed exact-key calls and observed coverage is >=75% of present native-data frames in both cohorts. A null is never coerced, rewritten, or counted as false; contradictions and missing data refuse. The local intervention is opt-in and retains 30 seconds / six changes / manual A only; does not grant backend permission or fabricate Repost payloads. See `docs/P04_HF11_NULLABLE_DATA_GATE.md`.
+
+
+## P04 HF12 — opt-in, one-working-outlier Repost experiment
+
+An exact IG455 A/B capture found 42 `false` D3r outcomes on A, 26 `true` and one `false` singleton on B. The manual trial may qualify with at most one B false/singleton outlier (<=5%). Only A `false` results at the exact Repost-data key may change, for six results or 30 seconds. `null` untouched, no backend permissions altered. See `docs/P04_HF12_EXPERIMENTAL_TRIAL.md`.
