@@ -47,7 +47,7 @@ require('getComponentEnabledSetting' in all_source, 'Component state reading mis
 social = (SOURCE/'SocialDiscovery.java').read_text()
 shape = (SOURCE/'SocialMethodShape.java').read_text()
 panel = (SOURCE/'TaskPanel.java').read_text()
-require('versionCode 16' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.11-p04-hf12-experimental-gate'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
+require('versionCode 17' in (ROOT/'app/build.gradle').read_text() and "versionName '0.6.12-p04-hf13-native-reels-recovery'" in (ROOT/'app/build.gradle').read_text(), 'Consolidated version metadata mismatch')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in social, 'Instagram APK evidence hash absent')
 require('238346353L' in social and '455.0.0.8.72' in social, 'Exact APK version/size guard missing')
 require('MessageDigest.getInstance("SHA-256")' in social and 'APK_SHA256.equals(actualHash.toString())' in social, 'APK SHA validation must precede reflection')
@@ -139,7 +139,7 @@ trace=(SOURCE/'P04GateTrace.java').read_text()
 summary=(SOURCE/'P04TraceSummary.java').read_text()
 module=(SOURCE/'InstaTaskModule.java').read_text()
 panel=(SOURCE/'TaskPanel.java').read_text()
-require('versionCode 16' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
+require('versionCode 17' in (ROOT/'app/build.gradle').read_text(), 'P04 version must advance')
 require('fb6ca8c21d909d95892e67339746b8fe43f409a9dea11f87d9ab0cee8e97c5b6' in trace
         and '238346353L' in trace and 'EXACT_APK_PASS' in trace,
         'P04 exact installed APK pin absent')
@@ -234,9 +234,9 @@ require(all(token in module for token in ('hook(mobile)', 'maybeHookActualRepost
         'P04PredicateTrace.note(P04PredicateTrace.SESSION_CHECK,original)',
         'P04GateTrace.enterUi(', 'P04GateTrace.leaveUi(frame,null)', 'return original;')),
         'HF03 passive upstream instrumentation missing')
-require('Try A Boolean gate' not in panel and 'Try A UI gate' in panel and
-        'P04GateTrace.armExactTrial()' in panel,
-        'HF08 requires separate evidence-gated UI trial, not old scalar trial')
+require('Try A Boolean gate' not in panel and 'Enable Repost · Reels tab' in panel and
+        'P04GateTrace.armHF13Recovery()' in panel,
+        'HF13 requires separate consent-based UI recovery, not old scalar trial')
 for forbidden in ('setAccessible(', 'getUserId(', 'getUsername(', 'getCaption(',
                   'String.valueOf(value)', 'getArgs()', 'return Boolean.TRUE;',
                   'new URL(', 'HttpURLConnection'):
@@ -339,7 +339,7 @@ require('activeCohort!=0' in trial and 'P04BranchInputs.PRESENT' in trial and
         'DURATION_NS=30_000_000_000L' in trial and 'deoptimized' in trial,
         'HF08 trial must refuse without branch-evidence, and be time/quantity bounded')
 require('P04ExactGateTrial.disarm()' in trace and
-        'Try A UI gate' in panel and 'Trial OFF' in panel and
+        'Enable Repost · Reels tab' in panel and 'Recovery OFF' in panel and
         'bash scripts/p04-hf08-smoke.sh' in workflow,
         'HF08 disarm/UI/hosted smoke contract missing')
 for banned in ('getUsername(', 'getUserId(', 'getCaption(', 'performClick(', 'HttpURLConnection',
@@ -417,3 +417,23 @@ assert 'bash scripts/p04-hf12-smoke.sh' in workflow
 assert (ROOT/'scripts/P04HF12OutlierSmoke.java').is_file()
 assert (ROOT/'docs/P04_HF12_EXPERIMENTAL_TRIAL.md').is_file()
 print('ITM_P04_HF12_EXPERIMENTAL_SINGLE_B_OUTLIER_AND_SAFETY_PASS')
+
+# HF13 must remain a consent-only, lease-bounded override of the proven native D3r gate.
+hf13=(SOURCE/'P04HF13Recovery.java').read_text()
+assert 'LEASE_NS = 90_000_000_000L' in hf13 and 'LIMIT = 64' in hf13
+assert 'if (cohort != 0)' in hf13 and 'Native D3r' in hf13
+assert 'P04ExactGateTrial.eligibleForHF13Recovery()' in hf13
+assert 'dataPresence!=P04BranchInputs.PRESENT' in hf13 and '!Boolean.FALSE.equals(original)' in hf13
+assert 'entryEpoch!=leaseEpoch || nested' in hf13
+assert 'onActivityExit()' in hf13 and 'onCaptureTransition()' in hf13
+assert 'P04HF13Recovery.maybeOverride(frame.recoveryEpoch' in predicate
+assert 'if(((Integer)key).intValue()!=0xdf82522e)return original;' in predicate
+assert 'P04HF13Recovery.onActivityExit()' in module
+assert 'P04HF13Recovery.onCaptureTransition()' in trace
+assert 'P04ExactGateTrial.onCaptureStart(index)' in trace
+assert 'P04ExactGateTrial.onCaptureStop()' in trace
+assert 'Enable Repost · Reels tab' in panel and 'Recovery OFF' in panel
+assert 'Reels displayed as posts and ordinary feed posts are NOT QUALIFIED' in panel
+assert 'bash scripts/p04-hf13-smoke.sh' in workflow
+assert (ROOT/'docs/P04_HF13_NATIVE_REELS_RECOVERY.md').is_file()
+print('ITM_P04_HF13_REELS_ONLY_MANUAL_RECOVERY_SOURCE_CONTRACT_PASS')

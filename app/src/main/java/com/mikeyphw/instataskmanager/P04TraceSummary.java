@@ -18,6 +18,8 @@ final class P04TraceSummary {
         int flag06True, flag06False, flag07True, flag07False;
         int referenceFieldsPresent, stringFieldsPresent;
         String lastObjectClass = "none"; // class name only, never Object.toString()
+        final java.util.Map<String,Integer> classCounts = new java.util.TreeMap<>();
+        int unlistedClasses;
         void record(int selector,Object result) {
             if (observed >= LIMIT_PER_GATE) { dropped++; return; }
             observed++;
@@ -30,6 +32,13 @@ final class P04TraceSummary {
                 // Only code metadata, not content or Object.toString().
                 String type = result.getClass().getName();
                 lastObjectClass = type.length() > 80 ? type.substring(0,80) : type;
+                // Capture code CLASS metadata per result, not only last class.
+                // Never stringify an Instagram return object. Cap novel classes.
+                if(classCounts.containsKey(lastObjectClass))
+                    classCounts.put(lastObjectClass,classCounts.get(lastObjectClass)+1);
+                else if(classCounts.size()<6 && lastObjectClass.startsWith("X."))
+                    classCounts.put(lastObjectClass,1);
+                else unlistedClasses++;
                 P04VariantShape.Observation shape=P04VariantShape.inspect(selector,result);
                 if (shape.variant==P04VariantShape.Observation.SINGLETON) singletonVariant++;
                 else if (shape.variant==P04VariantShape.Observation.PAYLOAD) {
@@ -138,7 +147,10 @@ final class P04TraceSummary {
                  .append(" null=").append(c.nullValues)
                  .append(" object=").append(c.objectValues)
                  .append(" capped_extra=").append(c.dropped)
-                 .append(" type=").append(c.lastObjectClass).append("\n");
+                 .append(" type=").append(c.classCounts.size()>1?"MIXED":c.lastObjectClass)
+                 .append("\n")
+                 .append("  Per-result code classes: ").append(c.classCounts)
+                 .append(" unlisted=").append(c.unlistedClasses).append("\n");
                 if (i==0 || i==1) {
                     b.append("  IG455 object-shape: singleton=").append(c.singletonVariant)
                      .append(" payload=").append(c.payloadVariant)

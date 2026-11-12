@@ -14,7 +14,7 @@ runs=[dict(databaseId=10,headSha=sha,event='pull_request',status='completed',con
 assert module.choose_successful_run(runs,sha)['databaseId']==10
 try:module.choose_successful_run(runs,'c'*40);assert False
 except RuntimeError:pass
-artifact='InstaTaskManager-P04-HF05-ConfigDispatch-debug-'+sha
+artifact='InstaTaskManager-P04-HF13-NativeReelsRecovery-debug-'+sha
 assert module.choose_artifact([{'name':artifact,'expired':False}],sha)==artifact
 try:module.choose_artifact([{'name':'InstaTaskManager-P04-HF04-debug-'+'b'*40}],sha);assert False
 except RuntimeError:pass

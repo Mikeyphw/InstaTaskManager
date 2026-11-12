@@ -40,6 +40,7 @@ final class TaskPanel {
     private Button exportButton;
     private volatile boolean exporting;
     private LinearLayout panel, controlsBar, scrollBody, socialSwitches;
+    private TextView hf13Status;
     private final NativeRepostRecovery nativeRecovery = new NativeRepostRecovery();
     private boolean socialExactVerified;
     private String nativeTrial = "No manual native-view attempt yet.";
@@ -149,12 +150,17 @@ final class TaskPanel {
     private void refreshCaptureFeedback() {
         int active=P04GateTrace.activeIndex();
         String line=P04GateTrace.feedback();
+        if (hf13Status != null && panel != null && "social".equals(tab))
+            hf13Status.setText("HF13 native Repost UI: "+P04HF13Recovery.status()+
+                "\nFresh native gate: "+
+                (P04ExactGateTrial.eligibleForHF13Recovery()?"READY":"NOT QUALIFIED")+
+                ". Reels tab only (manual); post Reels/feed unverified.");
         if (captureBanner != null) {
             captureBanner.setText(line);
             captureBanner.setTextColor(active >= 0 ? ACCENT : FOREGROUND);
         }
         if (chip != null) {
-            boolean trialOn=P04ExactGateTrial.status().startsWith("ARMED");
+            boolean trialOn=P04HF13Recovery.isEnabled();
             chip.setText(trialOn ? "⚡ A" : active == 0 ? "● A" : active == 1 ? "● B" : "TM");
             chip.setTextColor(active >= 0 ? ACCENT : FOREGROUND);
             chip.setContentDescription(active < 0
@@ -553,15 +559,15 @@ final class TaskPanel {
         p04row2.addView(clear,new LinearLayout.LayoutParams(0,dp(42),1));
         socialSwitches.addView(p04row2);
         LinearLayout gateRow=new LinearLayout(activity);
-        Button gate=button("Try A UI gate",()->{
-            p04Action=P04GateTrace.armExactTrial();
+        Button gate=button("Enable Repost · Reels tab",()->{
+            p04Action=P04GateTrace.armHF13Recovery();
             actionToast(p04Action);
             refreshCaptureFeedback();
             update();
         });
         // Keep clickable in A to explain WHY the local experiment is refused.
         gate.setEnabled(P04GateTrace.ready() && recording==0);
-        Button gateOff=button("Trial OFF",()->{
+        Button gateOff=button("Recovery OFF",()->{
             p04Action=P04GateTrace.stopExactTrial();
             actionToast(p04Action);
             refreshCaptureFeedback();
@@ -570,21 +576,23 @@ final class TaskPanel {
         gateRow.addView(gate,new LinearLayout.LayoutParams(0,dp(42),1));
         gateRow.addView(gateOff,new LinearLayout.LayoutParams(0,dp(42),1));
         socialSwitches.addView(gateRow);
-        TextView trialStatus=txt("HF12 experimental UI check: "+P04ExactGateTrial.status()+
-            "; eligibility="+(P04ExactGateTrial.eligibleGate()<0 ? "NOT PROVEN":
+        TextView trialStatus=txt("HF13 native Repost UI: "+P04HF13Recovery.status()+
+            "; exact eligibility="+(P04ExactGateTrial.eligibleGate()<0 ? "NOT PROVEN":
             P04ExactGateTrial.LABELS[P04ExactGateTrial.eligibleGate()])+". " +
-            "Reason: "+P04ExactGateTrial.reason()+". No fake media or social data.",11,false);
+            "No fake media or social data; no automatic reposts.",11,false);
+        hf13Status=trialStatus;
         socialSwitches.addView(trialStatus);
-        TextView p04Help=txt("Procedure: with the affected account, Start A, browse the same public " +
-                "Reel and feed post, then Stop. Switch accounts, Start B, repeat, Stop, Export. " +
-                "Count UI labels is optional; it checks exact words only and saves counts. " +
-                "Do not leave the wrong account capture active while switching. " +
-                "Only after both accounts produce repeated exact eligibility data with native Repost objects " +
-                "present can you return to A, press Start A, then Try A UI gate. HF12 tolerates one false singleton result on B (<=5%); native null results are never modified. " +
-                "The trial expires after 30 seconds or 6 changed local results, whichever comes first. " +
-                "Stop or Trial OFF disarms it. If Instagram behaves oddly, restart it. " +
-                "HF03 records upstream Boolean outcomes in their original call order, only " +
-                "inside Repost selector 4. All Instagram results remain unchanged.",11,false);
+        TextView p04Help=txt("HF13 RECOVERY — manually opt in ONLY when Account A is " +
+                "open in the dedicated Reels tab. Start A recording, then tap Enable Repost. " +
+                "An existing qualified HF12 A/B baseline and live D3r receiver are mandatory. " +
+                "Up to 64 exact false-to-true UI checks can run for 90 seconds; re-arm manually. " +
+                "Tap Recovery OFF before switching accounts, navigating elsewhere, or testing other posts. " +
+                "Activity exit/recording change/restart automatically turns recovery OFF, but a " +
+                "same-Activity account or tab switch cannot yet be recognized reliably. " +
+                "Reels displayed as posts and ordinary feed posts are NOT QUALIFIED; do not enable there. " +
+                "Null, true, other config keys, clicks, backend and social data remain native. " +
+                "Disable restores future predicate results immediately; already-rendered UI " +
+                "may need to refresh or Instagram restart. InstaEclipse Disable Repost must be OFF.",11,false);
         socialSwitches.addView(p04Help);
         TextView status = txt("OFF by default. Avatar switches are requested-only; " +
                 "no avatar hooks are installed.\nManual Repost trials require a successful " +
@@ -616,7 +624,7 @@ final class TaskPanel {
     private void closePanel() {
         stopSampler();
         socialExactVerified = false;
-        if(panel!=null){decor.removeView(panel);panel=null;content=null;captureBanner=null;controlsBar=null;exportButton=null;socialSwitches=null;scrollBody=null;}
+        if(panel!=null){decor.removeView(panel);panel=null;content=null;captureBanner=null;controlsBar=null;exportButton=null;socialSwitches=null;scrollBody=null;hf13Status=null;}
         refreshCaptureFeedback();
         if(chip!=null) chip.setVisibility(View.VISIBLE);
     }

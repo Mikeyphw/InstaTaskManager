@@ -48,8 +48,8 @@ final class P04GateTrace {
     static String feedback() {
         if (!ready) return "P04 · " + installStatus;
         String capture=STATE.feedback();
-        String trial=P04ExactGateTrial.status();
-        return trial.startsWith("ARMED") ? capture+"\n⚡ HF08 UI TRIAL: "+trial : capture;
+        String trial=P04HF13Recovery.status();
+        return trial.startsWith("ENABLED") ? capture+"\n⚡ HF13 RECOVERY: "+trial : capture;
     }
     static void setStatus(String status) {installStatus=status;}
 
@@ -152,19 +152,26 @@ final class P04GateTrace {
     }
     static String begin(int index) {
         if (!ready) return "REFUSED: P04 hooks not ready ("+status()+")";
+        P04HF13Recovery.onCaptureTransition();
         P04ExactGateTrial.disarm();
         STATE.start(index);
+        P04ExactGateTrial.onCaptureStart(index);
         return "P04 recording manual account "+(index==0?"A":"B")+" (no identity read)";
     }
-    static String stop() {P04ExactGateTrial.disarm();STATE.stop();return "P04 stopped (trial OFF)";}
-    static String armExactTrial() {return P04ExactGateTrial.arm(STATE.activeIndex());}
-    static String stopExactTrial() {P04ExactGateTrial.disarm();return "Exact-gate UI trial OFF";}
-    static String clear() {STATE.clear();P04PredicateTrace.clear();return "P04 capture cleared";}
+    static String stop() {P04HF13Recovery.onCaptureTransition();P04ExactGateTrial.disarm();P04ExactGateTrial.onCaptureStop();STATE.stop();return "P04 stopped (HF13 OFF)";}
+    static String armExactTrial() {return "REFUSED: HF12 is now regression-only; use HF13 recovery control";}
+    static String armHF13Recovery() {return P04HF13Recovery.arm(STATE.activeIndex(),ready,
+        InstaTaskModule.dataGateReady());}
+    static String stopExactTrial() {P04HF13Recovery.off("User pressed Recovery OFF");
+        P04ExactGateTrial.disarm();return "HF13 native Repost UI recovery OFF (future calls native)";}
+    static String clear() {P04HF13Recovery.off("Clear A/B");STATE.clear();P04PredicateTrace.clear();return "P04 capture cleared; HF13 OFF";}
     static String report() {
         return "P04 EXACT-APK A/B TRACE\nHook: "+status()+"\n"+STATE.render()
             + InstaTaskModule.dataGateStatus() + "\n"
             + P04PredicateTrace.report()
-            + "Repost experimental UI gate: " + P04ExactGateTrial.status() + "\n";
+            + "HF13 native Repost recovery: " + P04HF13Recovery.status() + "\n"
+            + "Reels tab only was manually asserted; post Reels and ordinary posts NOT QUALIFIED.\n"
+            + "HF12 legacy trial (regression only): " + P04ExactGateTrial.status() + "\n";
     }
 
     static String countVisibleLabels(Activity activity,View excludedPanel,View excludedChip) {

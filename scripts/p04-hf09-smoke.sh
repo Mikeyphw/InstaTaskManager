@@ -4,5 +4,5 @@ cd "$(dirname "$0")/.."
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/itm-hf09.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
 p='app/src/main/java/com/mikeyphw/instataskmanager'
-javac -encoding UTF-8 -d "$tmp" "$p/P04ActualConfigTarget.java" "$p/P04InputPresence.java" "$p/P04BranchInputs.java" "$p/P04ExactGateTrial.java" "$p/P04PredicateTrace.java" scripts/P04HF09ActualReceiverSmoke.java
+javac -encoding UTF-8 -d "$tmp" "$p/P04ActualConfigTarget.java" "$p/P04InputPresence.java" "$p/P04BranchInputs.java" "$p/P04ExactGateTrial.java" "$p/P04HF13Recovery.java" "$p/P04PredicateTrace.java" scripts/P04HF09ActualReceiverSmoke.java
 java -cp "$tmp" com.mikeyphw.instataskmanager.P04HF09ActualReceiverSmoke

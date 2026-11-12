@@ -40,6 +40,7 @@ final class P04PredicateTrace {
 
     static final class Frame {
         final int cohort;
+        final long recoveryEpoch;
         final int inputPresence;
         final int repostDataPresence;
         final int[] exactGateOriginals = {-1,-1};
@@ -54,6 +55,7 @@ final class P04PredicateTrace {
         boolean changedByTrial;
         Frame(int cohort, Frame parent, int inputPresence, int repostDataPresence) {
             this.cohort=cohort;
+            this.recoveryEpoch=P04HF13Recovery.epoch();
             this.parent=parent;
             this.inputPresence=inputPresence;
             this.repostDataPresence=repostDataPresence;
@@ -108,8 +110,13 @@ final class P04PredicateTrace {
         if(frame.exactGateOriginals[P04ExactGateTrial.DATA_ELIGIBILITY]<0)
             frame.exactGateOriginals[P04ExactGateTrial.DATA_ELIGIBILITY]=
                 P04ExactGateTrial.outcome(original);
-        Object chosen=P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
-            P04ExactGateTrial.DATA_ELIGIBILITY,original);
+        // HF13 is exclusively the proven D3r int key in selector-4. HF12
+        // remains accessible to regression tests, never simultaneously armed.
+        Object chosen=P04HF13Recovery.maybeOverride(frame.recoveryEpoch,frame.cohort,
+            frame.repostDataPresence,frame.parent!=null,original);
+        if(chosen==original)
+            chosen=P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
+                P04ExactGateTrial.DATA_ELIGIBILITY,original);
         if(chosen!=original)frame.changedByTrial=true;
         return chosen;
     }
@@ -178,6 +185,7 @@ final class P04PredicateTrace {
     }
 
     static synchronized void clear(){
+        P04HF13Recovery.off("Diagnostic evidence cleared");
         P04ExactGateTrial.reset();
         for(int a=0;a<2;a++)for(int s=0;s<3;s++){
             FRAME_COUNTS[a][s]=0;

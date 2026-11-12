@@ -164,6 +164,7 @@ public final class InstaTaskModule extends XposedModule {
         try {deoptimized=deoptimize(P04GateTrace.uiMethod(loader));}
         catch (Throwable e) {appendUnavailable(missing,"RepostCallerDeopt",e);}
         P04ExactGateTrial.setDeoptimized(deoptimized);
+        if(!deoptimized)P04HF13Recovery.off("Caller deoptimization unavailable");
         P04GateTrace.installed(optional,missing.toString() +
             (deoptimized ? " | caller deopt=YES" : " | caller deopt=NO; trial disabled"));
     }
@@ -203,12 +204,18 @@ public final class InstaTaskModule extends XposedModule {
                 dataHookSuccess++;
             } catch (Throwable ignored) {
                 dataHookFailures++;
+                P04HF13Recovery.onHookFailure();
                 // Do not retry a failing owner or affect core A/B capture.
             }
         },"ITM-HF10-d3r-hook-"+ordinal);
         installer.setDaemon(true);
         try {installer.start();}
-        catch (Throwable ignored) {dataHookFailures++;}
+        catch (Throwable ignored) {dataHookFailures++;P04HF13Recovery.onHookFailure();}
+    }
+
+    static boolean dataGateReady() {
+        InstaTaskModule module=live;
+        return module!=null && module.dataHookSuccess>0 && module.dataHookFailures==0;
     }
 
     static String dataGateStatus() {
@@ -259,6 +266,12 @@ public final class InstaTaskModule extends XposedModule {
                 hook(method).setId("itm-p00-" + name)
                     .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                     .intercept(chain -> {
+                        try {
+                            Object owner=chain.getThisObject();
+                            if(owner instanceof Activity &&
+                               "com.instagram.android".equals(((Activity)owner).getPackageName()))
+                                P04HF13Recovery.onActivityExit();
+                        } catch(Throwable ignored) {P04HF13Recovery.onActivityExit();}
                         try { return chain.proceed(); }
                         finally {
                             try {

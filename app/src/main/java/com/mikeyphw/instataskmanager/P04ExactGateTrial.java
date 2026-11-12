@@ -18,6 +18,8 @@ final class P04ExactGateTrial {
     private static final int[][][][] counts=new int[2][GATES][OUTCOMES][3];
     private static final int[][] presentCounts=new int[2][3]; // missing/present/unavailable
     private static boolean deoptimized;
+    private static boolean freshAWindow;
+    private static int freshAFalseBase, freshAPresentBase;
     private static int armedGate=-1, changed;
     private static long deadline;
     private P04ExactGateTrial() { }
@@ -25,7 +27,8 @@ final class P04ExactGateTrial {
     static synchronized void setDeoptimized(boolean ok) { deoptimized=ok; if(!ok)disarm(); }
     static synchronized boolean isDeoptimized() {return deoptimized;}
     static synchronized void reset() {
-        disarm();changed=0;
+        disarm();changed=0;freshAWindow=false;
+        freshAFalseBase=0;freshAPresentBase=0;
         for(int cohort=0;cohort<2;cohort++){
             java.util.Arrays.fill(presentCounts[cohort],0);
             for(int gate=0;gate<GATES;gate++)
@@ -34,6 +37,13 @@ final class P04ExactGateTrial {
         }
     }
     static synchronized void disarm() {armedGate=-1;deadline=0;}
+    /** New recording always invalidates any prior manually labeled A window. */
+    static synchronized void onCaptureStart(int index) {
+        freshAWindow=index==0;
+        freshAFalseBase=counts[0][DATA_ELIGIBILITY][1][0];
+        freshAPresentBase=presentCounts[0][P04BranchInputs.PRESENT];
+    }
+    static synchronized void onCaptureStop() {freshAWindow=false;}
     static int outcome(Object value) {
         return Boolean.TRUE.equals(value)?0:Boolean.FALSE.equals(value)?1:
             value==null?2:3;
@@ -103,6 +113,36 @@ final class P04ExactGateTrial {
         }
         return -1;
     }
+    /**
+     * HF13 can use the independently demonstrated HF12 native-Reels result
+     * WITHOUT forcing a repeat B-account trace after each process restart.
+     * Requires fresh, native-only A Reels-tab frames (manually asserted), exact
+     * data and deoptimization; static HF12 reference is limited to this APK.
+     * If any fresh B samples exist, the full strict A/B qualifier is mandatory.
+     * No account/session identity is inferred from manual A or B labels.
+     */
+    static synchronized boolean eligibleForHF13Recovery() {
+        if (!deoptimized || !freshAWindow) return false;
+        // At least five Reels-tab native observations AFTER the latest Start A.
+        if (counts[0][DATA_ELIGIBILITY][1][0]-freshAFalseBase<5 ||
+            presentCounts[0][P04BranchInputs.PRESENT]-freshAPresentBase<5)
+            return false;
+        if (presentCounts[1][0]!=0 || presentCounts[1][1]!=0 ||
+            presentCounts[1][2]!=0) return eligibleGate()==DATA_ELIGIBILITY;
+        if (presentCounts[0][P04BranchInputs.MISSING]!=0 ||
+            presentCounts[0][P04BranchInputs.UNAVAILABLE]!=0)return false;
+        int aF=counts[0][DATA_ELIGIBILITY][1][0];
+        int aN=counts[0][DATA_ELIGIBILITY][2][0];
+        int total=presentCounts[0][P04BranchInputs.PRESENT];
+        if (aF<5 || total<5 || (long)aF*4<(long)(aF+aN)*3 ||
+            (long)(aF+aN)*4<(long)total*3)return false;
+        for (int o=0;o<OUTCOMES;o++) for(int terminal=0;terminal<3;terminal++) {
+            if ((o==1 || o==2) && terminal==0)continue;
+            if(counts[0][DATA_ELIGIBILITY][o][terminal]>0)return false;
+        }
+        return true;
+    }
+
     static synchronized String reason() {
         if(!deoptimized)return "Caller deoptimization unavailable; gate trial disabled";
         if(presentCounts[0][P04BranchInputs.MISSING]>0 ||

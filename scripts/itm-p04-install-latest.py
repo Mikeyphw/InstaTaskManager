@@ -45,8 +45,8 @@ def choose_successful_run(runs, sha):
 
 def choose_artifact(artifacts,sha):
     names=[a for a in artifacts if isinstance(a.get('name'),str) and
-           a['name'].startswith('InstaTaskManager-P04-') and
-           a['name'].endswith('-debug-'+sha) and not a.get('expired',False)]
+           a['name']=='InstaTaskManager-P04-HF13-NativeReelsRecovery-debug-'+sha
+           and not a.get('expired',False)]
     if len(names)!=1:
         raise RuntimeError('REFUSED: expected one unexpired SHA-bound APK artifact; found '+str(len(names)))
     return names[0]['name']
@@ -70,23 +70,26 @@ def downloads_dir():
 def install_latest():
     for tool in ('gh','adb'):
         if shutil.which(tool) is None:raise RuntimeError('Missing Termux binary: '+tool)
-    pr=gh_json('pr','view',str(PR),'-R',REPO,'--json',
-               'number,state,baseRefName,headRefName,headRefOid,url')
-    if (pr.get('number')!=PR or pr.get('state')!='OPEN' or
-        pr.get('baseRefName')!=BASE or pr.get('headRefName')!=BRANCH or
-        not re.fullmatch('[0-9a-f]{40}',pr.get('headRefOid') or '')):
+    # GitHub REST through gh api: avoid shell JSON filters and gh --json.
+    pr=gh_json('api','repos/'+REPO+'/pulls/'+str(PR))
+    if (pr.get('number')!=PR or pr.get('state')!='open' or
+        (pr.get('base') or {}).get('ref')!=BASE or
+        (pr.get('head') or {}).get('ref')!=BRANCH or
+        not re.fullmatch('[0-9a-f]{40}',(pr.get('head') or {}).get('sha') or '')):
         raise RuntimeError('REFUSED: PR #3 identity/base/branch changed')
-    sha=pr['headRefOid']
-    print('ITM_HF12_INSTALL_EXACT_PR_HEAD='+sha,flush=True)
-    runs=gh_json('run','list','-R',REPO,'--branch',BRANCH,
-                 '--workflow','android.yml','--limit','70','--json',
-                 'databaseId,headSha,event,status,conclusion')
+    sha=pr['head']['sha']
+    print('ITM_HF13_INSTALL_EXACT_PR_HEAD='+sha,flush=True)
+    raw=gh_json('api','repos/'+REPO+'/actions/workflows/android.yml/runs'+
+                '?event=pull_request&per_page=100')
+    runs=[{'databaseId':x.get('id'),'headSha':x.get('head_sha'),
+           'event':x.get('event'),'status':x.get('status'),
+           'conclusion':x.get('conclusion')} for x in raw.get('workflow_runs',[])]
     run=choose_successful_run(runs,sha)
     rid=int(run['databaseId'])
     artifacts=gh_json('api','repos/'+REPO+'/actions/runs/'+str(rid)+'/artifacts')
     artifact_name=choose_artifact(artifacts.get('artifacts',[]),sha)
     tmp=os.environ.get('TMPDIR') or tempfile.gettempdir()
-    with tempfile.TemporaryDirectory(prefix='itm-p04-hf12-apk-',dir=tmp) as t:
+    with tempfile.TemporaryDirectory(prefix='itm-p04-hf13-apk-',dir=tmp) as t:
         folder=Path(t)
         command(['gh','run','download',str(rid),'-R',REPO,'-n',artifact_name,
                  '-D',folder],live=True)
@@ -97,8 +100,8 @@ def install_latest():
         actual=hashlib.sha256(apk.read_bytes()).hexdigest()
         if expected!=actual:raise RuntimeError('REFUSED: downloaded APK SHA256 mismatch')
         # Important race guard: the PR could advance during download.
-        again=gh_json('pr','view',str(PR),'-R',REPO,'--json','headRefOid')
-        if again.get('headRefOid')!=sha:
+        again=gh_json('api','repos/'+REPO+'/pulls/'+str(PR))
+        if (again.get('head') or {}).get('sha')!=sha:
             raise RuntimeError('REFUSED: PR advanced while downloading; install cancelled')
         dest=downloads_dir();dest.mkdir(parents=True,exist_ok=True)
         target=dest/('InstaTaskManager-P04-'+sha[:12]+'.apk')
@@ -114,16 +117,16 @@ def install_latest():
         command(['adb','-s',ADB_SERIAL,'get-state'])
         prior=command(['adb','-s',ADB_SERIAL,'shell','pm','path',APK_PACKAGE],allow_failure=True)
         if (prior.stdout or '').strip().startswith('package:'):
-            print('ITM_HF12_UNINSTALLING_PRIOR_DEBUG_APK (module settings and Vector scope reset)',flush=True)
+            print('ITM_HF13_UNINSTALLING_PRIOR_DEBUG_APK (module settings and Vector scope reset)',flush=True)
             command(['adb','-s',ADB_SERIAL,'uninstall',APK_PACKAGE],live=True)
         command(['adb','-s',ADB_SERIAL,'install',target],live=True)
         location=command(['adb','-s',ADB_SERIAL,'shell','pm','path',APK_PACKAGE]).stdout or ''
         if 'package:' not in location:
             raise RuntimeError('APK install returned success but package path is missing')
-        print('ITM_HF12_APK_INSTALL_PASS commit='+sha+' run='+str(rid),flush=True)
+        print('ITM_HF13_APK_INSTALL_PASS commit='+sha+' run='+str(rid),flush=True)
         print('APK='+str(target),flush=True)
         print('SHA256='+actual,flush=True)
-        print('Next: restart Instagram to reload the LSPosed module, then capture Account A/B.',flush=True)
+        print('Next: re-enable Vector/LSPosed Instagram scope if needed, restart Instagram; enable HF13 manually only on Reels tab.',flush=True)
         return target
 
 if __name__=='__main__':

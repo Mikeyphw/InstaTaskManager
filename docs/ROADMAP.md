@@ -187,3 +187,9 @@ Source implemented; hosted/physical **pending**. HF10 report showed exact-key D3
 ## P04 HF12 — limited minority-B outlier experimental trial
 
 Following on-device HF11 evidence, allow at most one B false/singleton result (<=5%) among an otherwise strongly positive B cohort. Maintain A false-only, null preservation, exact key/native data/deoptimization/scope and 6-call/30s limits; add hosted adversarial tests. Do not claim real Repost restored without successful physical proof.
+
+## P04 HF13 — native Reels-tab Repost recovery (implemented source; physical acceptance pending)
+
+See [P04_HF13_NATIVE_REELS_RECOVERY.md](P04_HF13_NATIVE_REELS_RECOVERY.md). HF12 demonstrated native Repost on one Reels-tab Reel; HF13 provides time-bounded manual opt-in with explicit OFF. Reels displayed as posts and ordinary feed posts remain **unverified**, not supported. Account identity is unbound: no persistent toggle until safe session binding exists.
+
+Next: HF14 independent Feed/post-Reels proof and native UI fidelity; HF15 friends/avatars only if genuinely backed by native social data. All earlier P00–P05 and social roadmaps remain in force.

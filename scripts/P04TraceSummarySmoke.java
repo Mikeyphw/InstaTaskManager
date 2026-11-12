@@ -71,8 +71,8 @@ public final class P04TraceSummarySmoke {
         check(P04GateTrace.begin(0).contains("recording"),"Begin A passive");
         check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(3),Boolean.FALSE)),"other selector untouched");
         for(int i=0;i<8;i++)check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"no scalar override");
-        check(P04GateTrace.report().contains("Repost experimental UI gate:"),"guarded UI trial status report");
-        check(P04GateTrace.stop().contains("trial OFF"),"stop disarms trial");
+        check(P04GateTrace.report().contains("HF13 native Repost recovery:"),"guarded UI trial status report");
+        check(P04GateTrace.stop().contains("HF13 OFF"),"stop disarms trial");
         check(Boolean.FALSE.equals(P04GateTrace.noteUi(new FakeUi(4),Boolean.FALSE)),"stopped passive");
         System.out.println("ITM_P04_AB_SUMMARY_SMOKE_PASS "+count+"/"+count);
     }

@@ -45,6 +45,16 @@ public final class P04HF02VariantSmoke {
         ck(report.contains("references=1 strings=1"),"reference presence only");
         ck(report.contains("positive=1") && report.contains("negative=1"),"number sign aggregation");
         ck(!report.contains("SECRET_ACCOUNT_NEVER_EXPORTED"),"no strings leaked");
+        P04TraceSummary mixed=new P04TraceSummary();
+        mixed.start(0);mixed.record(4,ua);mixed.record(4,ub);
+        mixed.record(11,fa);mixed.record(11,fb);mixed.stop();
+        String m=mixed.render();
+        ck(m.contains("type=MIXED"),"HF13 mixed UI/UFI header not misleading");
+        ck(m.contains("X.09j4=1") && m.contains("X.09ZC=1"),
+           "per-return UI class buckets preserve both six-change variants");
+        ck(m.contains("X.09Xx=1") && m.contains("X.09YD=1"),
+           "per-return UFI buckets expose unknown class shape");
+        ck(!m.contains("SECRET_ACCOUNT_NEVER_EXPORTED"),"class-only counts never show values");
         ck(!sum.booleanGapReady(),"variant A/B cannot trigger scalar boolean override");
         System.out.println("ITM_P04_HF02_VARIANT_SMOKE_PASS="+n);
     }
