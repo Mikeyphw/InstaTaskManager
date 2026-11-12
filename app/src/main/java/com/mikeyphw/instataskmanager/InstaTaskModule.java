@@ -106,10 +106,11 @@ public final class InstaTaskModule extends XposedModule {
         }
         try {
             Method mobile=P04GateTrace.mobileConfigMethod(loader);
-            hook(mobile).setId("itm-p04-hf05-mobileconfig-dispatch")
+            hook(mobile).setId("itm-p04-hf09-actual-config-x02nr")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
                     Object original=chain.proceed();
+                    if (!P04PredicateTrace.inRepostFrame()) return original;
                     try {
                         P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original);
                         return P04PredicateTrace.noteExactMobile(chain.getArg(0),original);

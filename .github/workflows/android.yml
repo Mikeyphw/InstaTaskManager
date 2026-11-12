@@ -46,6 +46,7 @@ jobs:
           bash scripts/p04-hf06-smoke.sh
           bash scripts/p04-hf07-smoke.sh
           bash scripts/p04-hf08-smoke.sh
+          bash scripts/p04-hf09-smoke.sh
           python3 scripts/p04-hf06-startup-contract.py
           python3 scripts/p04-hf05-install-contract.py
 
@@ -80,7 +81,7 @@ jobs:
           sha256sum app/build/outputs/apk/debug/app-debug.apk > app/build/outputs/apk/debug/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: InstaTaskManager-P04-HF08-ExactGate-debug-${{ github.event.pull_request.head.sha || github.sha }}
+          name: InstaTaskManager-P04-HF09-ActualReceiver-debug-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/SHA256SUMS

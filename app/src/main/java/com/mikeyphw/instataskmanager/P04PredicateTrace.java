@@ -7,7 +7,7 @@ package com.mikeyphw.instataskmanager;
  * Instrumented getters are otherwise entirely passive.
  */
 final class P04PredicateTrace {
-    static final int MOBILE_CONFIG = 0;     // X.02ja.BdA(J):Z concrete implementation
+    static final int MOBILE_CONFIG = 0;     // X.02nr.BdA(J):Z actual factory receiver in both cohorts
     static final int ELIGIBILITY = 1;       // X.02ib.D3r(I):Boolean concrete implementation (nullable)
     static final int SESSION_CHECK = 2;     // X.02xy.A04(UserSession,String):Z
     private static final int SOURCES = 3;
@@ -16,16 +16,16 @@ final class P04PredicateTrace {
     private static final int MAX_FRAMES = 256;
     private static final int MAX_FACTORY_ORDINAL = 2;
     // Runtime provider class is code metadata only, not a config value.
-    // Categories: X.02ja, X.0T4C, other X class, null, other package.
-    private static final int FACTORY_TYPES = 5;
+    // Categories: X.02ja, X.0T4C, X.02nr, other X class, null, other package.
+    private static final int FACTORY_TYPES = 6;
     private static final String[] FACTORY_LABELS =
-        {"X.02ja", "X.0T4C", "OTHER_X", "NULL", "OTHER_PACKAGE"};
+        {"X.02ja", "X.0T4C", "X.02nr", "OTHER_X", "NULL", "OTHER_PACKAGE"};
     private static final int[][][][] FACTORY_COUNTS =
         new int[2][3][MAX_FACTORY_ORDINAL][FACTORY_TYPES];
     private static final String[][][] LAST_OTHER_CLASS =
         new String[2][3][MAX_FACTORY_ORDINAL];
     private static final String[] NAMES = {
-        "HF05 MobileConfig X.0T4C Boolean (call ordinal)",
+        "HF09 actual X.02nr MobileConfig Boolean (call ordinal)",
         "Config X.02ib nullable Boolean (call ordinal)",
         "Repost session check Boolean (call ordinal)"
     };
@@ -82,6 +82,9 @@ final class P04PredicateTrace {
                 Boolean.FALSE.equals(value)?1:value==null?2:3;
     }
 
+    /** Cheap fast path for the globally hooked MobileConfig getter. No args or data. */
+    static boolean inRepostFrame() {return ACTIVE.get()!=null;}
+
     /** Only two DEX-pinned predicates, and only inside selector 4. Never export keys. */
     static Object noteExactMobile(Object key,Object original) {
         Frame frame=ACTIVE.get();
@@ -112,15 +115,23 @@ final class P04PredicateTrace {
         if(frame==null)return;
         int ordinal=frame.nextFactory++;
         if(ordinal>=MAX_FACTORY_ORDINAL)return;
-        if(value==null){frame.factoryTypes[ordinal]=3;return;}
+        if(value==null){frame.factoryTypes[ordinal]=4;return;}
         String type=value.getClass().getName();
-        if("X.02ja".equals(type))frame.factoryTypes[ordinal]=0;
-        else if("X.0T4C".equals(type))frame.factoryTypes[ordinal]=1;
-        else if(type.startsWith("X.") && type.length()<=40) {
-            frame.factoryTypes[ordinal]=2;
+        int category=classifyFactoryName(type);
+        frame.factoryTypes[ordinal]=category;
+        if(category==3) {
             // Class metadata, never result.toString(), key or account content.
             frame.otherFactoryClasses[ordinal]=type;
-        } else frame.factoryTypes[ordinal]=4;
+        }
+    }
+
+    /** Synthetic-testable code-name classifier. No config data or account identities. */
+    static int classifyFactoryName(String name) {
+        if ("X.02ja".equals(name))return 0;
+        if ("X.0T4C".equals(name))return 1;
+        if ("X.02nr".equals(name))return 2;
+        if (name!=null && name.startsWith("X.") && name.length()<=40)return 3;
+        return 5;
     }
 
     /** In a finally block, ALWAYS restore the caller's ThreadLocal context. */
@@ -139,7 +150,7 @@ final class P04PredicateTrace {
                 int category=frame.factoryTypes[i];
                 if(category<0)continue;
                 FACTORY_COUNTS[frame.cohort][state][i][category]++;
-                if(category==2)LAST_OTHER_CLASS[frame.cohort][state][i]=
+                if(category==3)LAST_OTHER_CLASS[frame.cohort][state][i]=
                         frame.otherFactoryClasses[i];
             }
             for(int source=0;source<SOURCES;source++)
@@ -221,7 +232,7 @@ final class P04PredicateTrace {
         out.append(P04ExactGateTrial.report());
         out.append("HF07: X.01ym.A02 is the DEX-verified factory before the Repost BdA gate.\n")
            .append("Factory result classes are code metadata only; no configuration keys or values retained.\n")
-           .append("HF05: X.0T4C is a bytecode-verified concrete MobileConfig receiver.\n")
+           .append("HF09: X.02nr is the actual A/B factory receiver and has concrete BdA(J)Z.\n")
            .append("A missing MobileConfig observation means NOT OBSERVED, never false.\n")
            .append("Values remain unmodified. Different ordinals may reflect different branch paths, not identical checks.\n");
         return out.toString();

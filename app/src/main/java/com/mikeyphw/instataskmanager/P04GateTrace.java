@@ -95,11 +95,11 @@ final class P04GateTrace {
         return m;
     }
     static Method mobileConfigMethod(ClassLoader loader) throws ReflectiveOperationException {
-        // Verified from the original IG455 APK, classes22.dex:
-        // X.0T4C implements BOTH MobileConfigUnsafeContext and X.0mMk.
-        // X.01ym.A02 returns X.0mMk at the selector-4 call site.
-        // Never call a getter to discover its runtime object or config key.
-        return P04ConfigTarget.resolve(loader);
+        // HF09: X.01ym.A02's *actual* runtime return class was X.02nr
+        // across 56/56 recorded selector-4 factory callbacks. IG455 classes.dex
+        // declares the concrete BdA(long):boolean directly on X.02nr.
+        // Retire the X.02ja and X.0T4C guesses, without calling the getter.
+        return P04ActualConfigTarget.resolve(loader);
     }
     static Method nullableConfigMethod(ClassLoader loader) throws ReflectiveOperationException {
         // X.0ApG.D3r is an interface method; hook the verified concrete X.02ib.
@@ -122,7 +122,7 @@ final class P04GateTrace {
         // optional configuration observer is unavailable on this IG455 build.
         ready=true;
         installStatus="READY: Repost A/B core (2/2), optional " + optionalInstalled + "/4; " +
-                "HF05 config-dispatch A/B read-only; HF07 factory-dispatch A/B read-only" +
+                "HF09 X.02nr actual-config A/B read-only; HF07 factory-dispatch A/B read-only" +
                 (unavailable.isEmpty()?"":"; unavailable: "+unavailable);
     }
     static P04PredicateTrace.Frame enterUi(Object instance) {

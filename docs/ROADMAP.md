@@ -155,3 +155,7 @@ Keep Start/Stop independent of this fourth optional hook.
 - A/B counts of original key-specific Boolean outcomes against singleton/payload state and A03 presence; never export keys, account/media contents or URLs.
 - Opt-in A-only, six-result/30-second local Boolean trial strictly after 3+/3+ consistent A(false/singleton)/B(true/payload) observations and all A03 present; otherwise explicit refusal; no native object copying or network/action hooks.
 - Ship consolidated HF07+HF08 from successful HF06 PR #3 source pin with Python ZIP installer. Require hosted CI, physical A/B and native action acceptance before claiming restored Repost.
+
+## P04 HF09 — Actual IG455 config provider (pre-hosted)
+
+HF08 A/B captured the actual config-provider class `X.02nr` on both accounts. `classes.dex` confirms exact public final `BdA(J)Z`. Replace speculative abstract `X.0T4C` observer with `X.02nr` and distinguish it in factory trace counts. Keep source pin, optional-hook independence, conservative A/B evidence gating and hosted-only Gradle.

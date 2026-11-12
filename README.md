@@ -121,3 +121,7 @@ config keys, post data, or returned object content. See
 After HF06's physical A/B captures, we revisited the **actual IG455 DEX** rather than assuming a receiver class or a single eligibility flag. The Repost selector-4 path requires both A0u and `X.0Ie0.A03` (native Repost data), and uses separate MobileConfig and nullable data-gate checks. The P04 HF07 configuration factory observer is included; HF08 adds caller-specific libxposed API102 `deoptimize` to address possible ART-inlined getter callbacks, exact-key aggregate A/B outcomes, A03 presence, and a default-OFF, bounded opt-in Repost **UI-only** Boolean trial if the same exact gate differs 3+/3+ times A/B.
 
 No account identities, media IDs, configuration keys or strings are exported. No friend-avatar presentation or backend repost-action permission is forced. The source and JVM tests do not imply an on-device fix; see `docs/P04_HF08_EXACT_BRANCH_DEOPT_GUARDED_UI_TRIAL.md` for exact DEX evidence, limitations, rollback and acceptance sequence.
+
+### P04 HF09 actual runtime config receiver
+
+HF08 discovered `X.02nr` as the concrete provider returned by the verified Repost config factory on both accounts. HF09 hooks its bytecode-verified `BdA(J)Z` only during explicit A/B selector-4 tracing; report includes a named `X.02nr` category and actual Boolean aggregate. See `docs/P04_HF09_ACTUAL_RUNTIME_RECEIVER.md`.
