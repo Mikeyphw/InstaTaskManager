@@ -5,7 +5,7 @@ public class XposedModule {
  public static class PackageReadyParam {
   public String getPackageName(){return null;}
  }
- public interface Chain {Object proceed() throws Throwable; Object getThisObject();}
+ public interface Chain {Object proceed() throws Throwable; Object getThisObject(); Object getArg(int index);}
  public interface Interceptor {Object intercept(Chain chain) throws Throwable;}
  public static class Builder {
   public Builder setId(String id){return this;}
@@ -13,6 +13,7 @@ public class XposedModule {
   public void intercept(Interceptor i){}
  }
  protected Builder hook(Method m){return new Builder();}
+ protected boolean deoptimize(Method m){return true;}
  public void onModuleLoaded(ModuleLoadedParam p){}
  public void onPackageReady(PackageReadyParam p){}
 }

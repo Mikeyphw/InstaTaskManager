@@ -79,18 +79,41 @@ public final class InstaTaskModule extends XposedModule {
                     e.getClass().getSimpleName()+")");
             return;
         }
-        // Only the three observer hooks are optional, after core capture is
-        // established. Missing an observer must not prevent core A/B readiness.
+        // Exact Repost data presence (X.0Ie0.A03) is required for any UI trial.
+        // Missing shape keeps read-only A/B recording available.
+        try {P04GateTrace.setBranchInputs(P04BranchInputs.preflight(loader));}
+        catch (Throwable e) {
+            P04GateTrace.setBranchInputs(null);
+            appendUnavailable(missing,"RepostDataInput",e);
+        }
+        // All four observer hooks are optional; A/B core remains available.
+        // The exact static factory call executes before the BdA dispatch in
+        // selector 4. It reveals the receiver CLASS only (never a config key).
         int optional=0;
+        try {
+            Method factory=P04FactoryTarget.resolve(loader);
+            hook(factory).setId("itm-p04-hf07-repost-config-factory")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object original=chain.proceed(); // ORIGINAL exactly once
+                    try {P04PredicateTrace.noteFactory(original);}
+                    catch (Throwable ignored) { }
+                    return original;
+                });
+            optional++;
+        } catch (Throwable e) {
+            appendUnavailable(missing,"FactoryDispatch",e);
+        }
         try {
             Method mobile=P04GateTrace.mobileConfigMethod(loader);
             hook(mobile).setId("itm-p04-hf05-mobileconfig-dispatch")
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
                     Object original=chain.proceed();
-                    try {P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original);}
-                    catch (Throwable ignored) { }
-                    return original;
+                    try {
+                        P04PredicateTrace.note(P04PredicateTrace.MOBILE_CONFIG,original);
+                        return P04PredicateTrace.noteExactMobile(chain.getArg(0),original);
+                    } catch (Throwable ignored) {return original;}
                 });
             optional++;
         } catch (Throwable e) {
@@ -102,9 +125,10 @@ public final class InstaTaskModule extends XposedModule {
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept(chain -> {
                     Object original=chain.proceed();
-                    try {P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original);}
-                    catch (Throwable ignored) { }
-                    return original;
+                    try {
+                        P04PredicateTrace.note(P04PredicateTrace.ELIGIBILITY,original);
+                        return P04PredicateTrace.noteExactData(chain.getArg(0),original);
+                    } catch (Throwable ignored) {return original;}
                 });
             optional++;
         } catch (Throwable e) {
@@ -124,7 +148,16 @@ public final class InstaTaskModule extends XposedModule {
         } catch (Throwable e) {
             appendUnavailable(missing,"SessionCheck",e);
         }
-        P04GateTrace.installed(optional,missing.toString());
+        // ART can inline these tiny getters into X.0Ie0.invoke(), making
+        // apparently installed hooks report zero events. Modern libxposed
+        // API 102 explicitly exposes caller deoptimization for this case.
+        // Restrict it to the exact verified selector owner, not the whole app.
+        boolean deoptimized=false;
+        try {deoptimized=deoptimize(P04GateTrace.uiMethod(loader));}
+        catch (Throwable e) {appendUnavailable(missing,"RepostCallerDeopt",e);}
+        P04ExactGateTrial.setDeoptimized(deoptimized);
+        P04GateTrace.installed(optional,missing.toString() +
+            (deoptimized ? " | caller deopt=YES" : " | caller deopt=NO; trial disabled"));
     }
 
     private static void appendUnavailable(StringBuilder details,String component,Throwable t) {

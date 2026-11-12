@@ -38,6 +38,7 @@ final class P04GateTrace {
     private static volatile boolean ready;
     private static Field uiSelector, ufiSelector;
     private static volatile P04InputPresence inputPresence;
+    private static volatile P04BranchInputs branchInputs;
 
     private P04GateTrace() { }
     static String status() {return installStatus;}
@@ -47,7 +48,8 @@ final class P04GateTrace {
     static String feedback() {
         if (!ready) return "P04 · " + installStatus;
         String capture=STATE.feedback();
-        return capture;
+        String trial=P04ExactGateTrial.status();
+        return trial.startsWith("ARMED") ? capture+"\n⚡ HF08 UI TRIAL: "+trial : capture;
     }
     static void setStatus(String status) {installStatus=status;}
 
@@ -114,12 +116,13 @@ final class P04GateTrace {
         return m;
     }
     static void setInputPresence(P04InputPresence probe) {inputPresence=probe;}
+    static void setBranchInputs(P04BranchInputs probe) {branchInputs=probe;}
     static void installed(int optionalInstalled,String unavailable) {
         // Core state hooks are already installed, so allow A/B even if an
         // optional configuration observer is unavailable on this IG455 build.
         ready=true;
-        installStatus="READY: Repost A/B core (2/2), optional " + optionalInstalled + "/3; " +
-                "HF05 config-dispatch A/B read-only" +
+        installStatus="READY: Repost A/B core (2/2), optional " + optionalInstalled + "/4; " +
+                "HF05 config-dispatch A/B read-only; HF07 factory-dispatch A/B read-only" +
                 (unavailable.isEmpty()?"":"; unavailable: "+unavailable);
     }
     static P04PredicateTrace.Frame enterUi(Object instance) {
@@ -127,7 +130,9 @@ final class P04GateTrace {
         try {if(uiSelector.getInt(instance)!=4)return null;
              P04InputPresence probe=inputPresence;
              int presence=probe==null?P04InputPresence.UNAVAILABLE:probe.classify(instance);
-             return P04PredicateTrace.enter(STATE.activeIndex(),presence);}
+             P04BranchInputs extra=branchInputs;
+             int repost=extra==null?P04BranchInputs.UNAVAILABLE:extra.classify(instance);
+             return P04PredicateTrace.enter(STATE.activeIndex(),presence,repost);}
         catch(Throwable ignored){return null;}
     }
     static void leaveUi(P04PredicateTrace.Frame frame,Object originalResult) {
@@ -147,15 +152,18 @@ final class P04GateTrace {
     }
     static String begin(int index) {
         if (!ready) return "REFUSED: P04 hooks not ready ("+status()+")";
+        P04ExactGateTrial.disarm();
         STATE.start(index);
         return "P04 recording manual account "+(index==0?"A":"B")+" (no identity read)";
     }
-    static String stop() {STATE.stop();return "P04 stopped (read-only)";}
+    static String stop() {P04ExactGateTrial.disarm();STATE.stop();return "P04 stopped (trial OFF)";}
+    static String armExactTrial() {return P04ExactGateTrial.arm(STATE.activeIndex());}
+    static String stopExactTrial() {P04ExactGateTrial.disarm();return "Exact-gate UI trial OFF";}
     static String clear() {STATE.clear();P04PredicateTrace.clear();return "P04 capture cleared";}
     static String report() {
         return "P04 EXACT-APK A/B TRACE\nHook: "+status()+"\n"+STATE.render()
             + P04PredicateTrace.report()
-            + "Repost eligibility override: NOT INSTALLED; original results preserved.\n";
+            + "Repost experimental UI gate: " + P04ExactGateTrial.status() + "\n";
     }
 
     static String countVisibleLabels(Activity activity,View excludedPanel,View excludedChip) {

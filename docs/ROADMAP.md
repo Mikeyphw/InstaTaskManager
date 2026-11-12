@@ -135,3 +135,23 @@ Trace exact `X.0Ie0.A02 → X.07XN.A0u` null/present categories per cohort and r
 ## P04 HF06 — restore Start A/B capture after HF05 method-shape refusal
 
 Exact IG455 DEX verified: abstract `X.0T4C` declares concrete `BdA(J)Z`; remove incorrect abstract-owner rejection, retain strict concrete method checks. Install core two A/B hooks independently of optional predicate observers; display partial readiness/error per observer, preserve exported A/B counts and privacy. One PR-only CI run and exact-head successful APK installer. Hosted and physical-device validation required.
+
+
+## P04 HF07 — actual MobileConfig factory recipient (read-only)
+
+HF06 on-device READY core 2/2 and optional 3/3; A=42/42 singleton,
+B=54/54 payload, A0u-present across both cohorts. Neither cohort
+produced MobileConfig getter observations inside selector 4.
+
+Static exact IG455 DEX shows the factory `X.01ym.A02(X.06g8,Z):X.0mMk`
+is called before `BdA(J):Z`. HF07 observes only the returned Java class
+metadata within selector-4 frames (up to two factory calls per frame).
+No config arguments or values, account/media content, or overrides.
+Keep Start/Stop independent of this fourth optional hook.
+
+## P04 HF08 — Exact selector-4 branches and opt-in trial (source built; hosted/runtime pending)
+- Re-audited IG455 DEX branch: A0u check alone does not establish native Repost eligibility; A03 native Repost data object presence is a prerequisite; data gate `X.0ApG.D3r(I)` and first MobileConfig `BdA(J)` have **distinct exact callsite keys**.
+- Scope deoptimization to `X.0Ie0.invoke()` (libxposed API 102) to counter ART inlining of the tiny getter hooks; report failure without disabling A/B core.
+- A/B counts of original key-specific Boolean outcomes against singleton/payload state and A03 presence; never export keys, account/media contents or URLs.
+- Opt-in A-only, six-result/30-second local Boolean trial strictly after 3+/3+ consistent A(false/singleton)/B(true/payload) observations and all A03 present; otherwise explicit refusal; no native object copying or network/action hooks.
+- Ship consolidated HF07+HF08 from successful HF06 PR #3 source pin with Python ZIP installer. Require hosted CI, physical A/B and native action acceptance before claiming restored Repost.

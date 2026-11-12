@@ -14,6 +14,16 @@ final class P04PredicateTrace {
     private static final int MAX_ORDINAL = 4;
     private static final int OUTCOMES = 4;  // TRUE, FALSE, NULL, OTHER
     private static final int MAX_FRAMES = 256;
+    private static final int MAX_FACTORY_ORDINAL = 2;
+    // Runtime provider class is code metadata only, not a config value.
+    // Categories: X.02ja, X.0T4C, other X class, null, other package.
+    private static final int FACTORY_TYPES = 5;
+    private static final String[] FACTORY_LABELS =
+        {"X.02ja", "X.0T4C", "OTHER_X", "NULL", "OTHER_PACKAGE"};
+    private static final int[][][][] FACTORY_COUNTS =
+        new int[2][3][MAX_FACTORY_ORDINAL][FACTORY_TYPES];
+    private static final String[][][] LAST_OTHER_CLASS =
+        new String[2][3][MAX_FACTORY_ORDINAL];
     private static final String[] NAMES = {
         "HF05 MobileConfig X.0T4C Boolean (call ordinal)",
         "Config X.02ib nullable Boolean (call ordinal)",
@@ -31,22 +41,33 @@ final class P04PredicateTrace {
     static final class Frame {
         final int cohort;
         final int inputPresence;
+        final int repostDataPresence;
+        final int[] exactGateOriginals = {-1,-1};
         final Frame parent;
         final int[][] values = new int[SOURCES][MAX_ORDINAL];
         final int[] next = new int[SOURCES];
-        Frame(int cohort, Frame parent, int inputPresence) {
+        final int[] factoryTypes = new int[MAX_FACTORY_ORDINAL];
+        final String[] otherFactoryClasses = new String[MAX_FACTORY_ORDINAL];
+        int nextFactory;
+        Frame(int cohort, Frame parent, int inputPresence, int repostDataPresence) {
             this.cohort=cohort;
             this.parent=parent;
             this.inputPresence=inputPresence;
+            this.repostDataPresence=repostDataPresence;
             for(int i=0;i<SOURCES;i++)java.util.Arrays.fill(values[i],-1);
+            java.util.Arrays.fill(factoryTypes,-1);
         }
     }
 
     static Frame enter(int cohort) {return enter(cohort,P04InputPresence.UNAVAILABLE);}
     static Frame enter(int cohort,int presence) {
+        return enter(cohort,presence,P04BranchInputs.UNAVAILABLE);
+    }
+    static Frame enter(int cohort,int presence,int repostPresence) {
         if(cohort!=0 && cohort!=1)return null;
         if(presence<0 || presence>=4)presence=P04InputPresence.UNAVAILABLE;
-        Frame frame=new Frame(cohort,ACTIVE.get(),presence);
+        if(repostPresence<0 || repostPresence>2)repostPresence=P04BranchInputs.UNAVAILABLE;
+        Frame frame=new Frame(cohort,ACTIVE.get(),presence,repostPresence);
         ACTIVE.set(frame);
         return frame;
     }
@@ -61,16 +82,66 @@ final class P04PredicateTrace {
                 Boolean.FALSE.equals(value)?1:value==null?2:3;
     }
 
+    /** Only two DEX-pinned predicates, and only inside selector 4. Never export keys. */
+    static Object noteExactMobile(Object key,Object original) {
+        Frame frame=ACTIVE.get();
+        if(frame==null || !(key instanceof Long)) return original;
+        if(((Long)key).longValue()!=0x0081089a0045309dL)return original;
+        if(frame.exactGateOriginals[P04ExactGateTrial.FIRST_CONFIG]<0)
+            frame.exactGateOriginals[P04ExactGateTrial.FIRST_CONFIG]=
+                P04ExactGateTrial.outcome(original);
+        return P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
+            P04ExactGateTrial.FIRST_CONFIG,original);
+    }
+    static Object noteExactData(Object key,Object original) {
+        Frame frame=ACTIVE.get();
+        if(frame==null || !(key instanceof Integer))return original;
+        if(((Integer)key).intValue()!=0xdf82522e)return original;
+        if(frame.exactGateOriginals[P04ExactGateTrial.DATA_ELIGIBILITY]<0)
+            frame.exactGateOriginals[P04ExactGateTrial.DATA_ELIGIBILITY]=
+                P04ExactGateTrial.outcome(original);
+        return P04ExactGateTrial.maybeOverride(frame.cohort,frame.repostDataPresence,
+            P04ExactGateTrial.DATA_ELIGIBILITY,original);
+    }
+
+    /** Observes ONLY the Java class of a factory result already returned by IG.
+     *  Does not read content, inspect fields, retain the object or invoke methods.
+     */
+    static void noteFactory(Object value) {
+        Frame frame=ACTIVE.get();
+        if(frame==null)return;
+        int ordinal=frame.nextFactory++;
+        if(ordinal>=MAX_FACTORY_ORDINAL)return;
+        if(value==null){frame.factoryTypes[ordinal]=3;return;}
+        String type=value.getClass().getName();
+        if("X.02ja".equals(type))frame.factoryTypes[ordinal]=0;
+        else if("X.0T4C".equals(type))frame.factoryTypes[ordinal]=1;
+        else if(type.startsWith("X.") && type.length()<=40) {
+            frame.factoryTypes[ordinal]=2;
+            // Class metadata, never result.toString(), key or account content.
+            frame.otherFactoryClasses[ordinal]=type;
+        } else frame.factoryTypes[ordinal]=4;
+    }
+
     /** In a finally block, ALWAYS restore the caller's ThreadLocal context. */
     static void leave(Frame frame, Object originalResult) {
         if(frame==null)return;
         if(ACTIVE.get()!=frame){ACTIVE.remove();return;} // fail closed on scope mismatch
         ACTIVE.set(frame.parent);
         int state=classify(originalResult);
+        P04ExactGateTrial.recordFrame(frame.cohort,frame.repostDataPresence,
+                                     frame.exactGateOriginals,state);
         synchronized(P04PredicateTrace.class){
             if(FRAME_COUNTS[frame.cohort][state]>=MAX_FRAMES){DROPPED_FRAMES[frame.cohort][state]++;return;}
             FRAME_COUNTS[frame.cohort][state]++;
             INPUT_COUNTS[frame.cohort][state][frame.inputPresence]++;
+            for(int i=0;i<MAX_FACTORY_ORDINAL;i++){
+                int category=frame.factoryTypes[i];
+                if(category<0)continue;
+                FACTORY_COUNTS[frame.cohort][state][i][category]++;
+                if(category==2)LAST_OTHER_CLASS[frame.cohort][state][i]=
+                        frame.otherFactoryClasses[i];
+            }
             for(int source=0;source<SOURCES;source++)
                 for(int ordinal=0;ordinal<MAX_ORDINAL;ordinal++){
                     int value=frame.values[source][ordinal];
@@ -88,10 +159,15 @@ final class P04PredicateTrace {
     }
 
     static synchronized void clear(){
+        P04ExactGateTrial.reset();
         for(int a=0;a<2;a++)for(int s=0;s<3;s++){
             FRAME_COUNTS[a][s]=0;
             DROPPED_FRAMES[a][s]=0;
             java.util.Arrays.fill(INPUT_COUNTS[a][s],0);
+            for(int i=0;i<MAX_FACTORY_ORDINAL;i++){
+                java.util.Arrays.fill(FACTORY_COUNTS[a][s][i],0);
+                LAST_OTHER_CLASS[a][s][i]=null;
+            }
             for(int gate=0;gate<SOURCES;gate++)
                 for(int ordinal=0;ordinal<MAX_ORDINAL;ordinal++)
                     java.util.Arrays.fill(COUNTS[a][s][gate][ordinal],0);
@@ -115,6 +191,20 @@ final class P04PredicateTrace {
                     out.append(P04InputPresence.LABELS[k]).append("=").append(INPUT_COUNTS[account][variant][k]);
                 }
                 out.append('\n');
+                for(int i=0;i<MAX_FACTORY_ORDINAL;i++){
+                    int[] categories=FACTORY_COUNTS[account][variant][i];
+                    int samples=0;
+                    for(int count:categories)samples+=count;
+                    if(samples==0)continue;
+                    out.append("   HF07 factory result #").append(i+1).append(": ");
+                    for(int j=0;j<FACTORY_TYPES;j++){
+                        if(j>0)out.append(' ');
+                        out.append(FACTORY_LABELS[j]).append('=').append(categories[j]);
+                    }
+                    String other=LAST_OTHER_CLASS[account][variant][i];
+                    if(other!=null)out.append(" last_other_X_type=").append(other);
+                    out.append('\n');
+                }
                 for(int source=0;source<SOURCES;source++)
                     for(int ordinal=0;ordinal<MAX_ORDINAL;ordinal++){
                         int[] values=COUNTS[account][variant][source][ordinal];
@@ -128,7 +218,10 @@ final class P04PredicateTrace {
                     }
             }
         }
-        out.append("HF05: X.0T4C is a bytecode-verified concrete MobileConfig receiver.\n")
+        out.append(P04ExactGateTrial.report());
+        out.append("HF07: X.01ym.A02 is the DEX-verified factory before the Repost BdA gate.\n")
+           .append("Factory result classes are code metadata only; no configuration keys or values retained.\n")
+           .append("HF05: X.0T4C is a bytecode-verified concrete MobileConfig receiver.\n")
            .append("A missing MobileConfig observation means NOT OBSERVED, never false.\n")
            .append("Values remain unmodified. Different ordinals may reflect different branch paths, not identical checks.\n");
         return out.toString();

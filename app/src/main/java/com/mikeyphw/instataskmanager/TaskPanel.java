@@ -154,7 +154,8 @@ final class TaskPanel {
             captureBanner.setTextColor(active >= 0 ? ACCENT : FOREGROUND);
         }
         if (chip != null) {
-            chip.setText(active == 0 ? "● A" : active == 1 ? "● B" : "TM");
+            boolean trialOn=P04ExactGateTrial.status().startsWith("ARMED");
+            chip.setText(trialOn ? "⚡ A" : active == 0 ? "● A" : active == 1 ? "● B" : "TM");
             chip.setTextColor(active >= 0 ? ACCENT : FOREGROUND);
             chip.setContentDescription(active < 0
                     ? "Instagram Task Manager — open performance panel"
@@ -448,7 +449,7 @@ final class TaskPanel {
                 "hidden clickable native View labelled Repost. Most Instagram views may not qualify.\n" +
                 "Friend avatars: no verified safe native presentation gate, so requests are " +
                 "PENDING and do NOT yet alter Instagram.\n" +
-                "HF03: upstream Repost predicate trace is READ-ONLY. No Boolean force trial.\n" +
+                "HF08: Repost gate trial changes at most 6 exact local UI Boolean outcomes, only after confirmed A/B split and native Repost data present.\n" +
                 nativeTrial + "\n\n" +
                 "Disable repost in InstaEclipse must be OFF. No synthetic repost/like data.");
         }
@@ -551,10 +552,37 @@ final class TaskPanel {
         p04row2.addView(inspect,new LinearLayout.LayoutParams(0,dp(42),1));
         p04row2.addView(clear,new LinearLayout.LayoutParams(0,dp(42),1));
         socialSwitches.addView(p04row2);
+        LinearLayout gateRow=new LinearLayout(activity);
+        Button gate=button("Try A UI gate",()->{
+            p04Action=P04GateTrace.armExactTrial();
+            actionToast(p04Action);
+            refreshCaptureFeedback();
+            update();
+        });
+        // Keep clickable in A to explain WHY the local experiment is refused.
+        gate.setEnabled(P04GateTrace.ready() && recording==0);
+        Button gateOff=button("Trial OFF",()->{
+            p04Action=P04GateTrace.stopExactTrial();
+            actionToast(p04Action);
+            refreshCaptureFeedback();
+            update();
+        });
+        gateRow.addView(gate,new LinearLayout.LayoutParams(0,dp(42),1));
+        gateRow.addView(gateOff,new LinearLayout.LayoutParams(0,dp(42),1));
+        socialSwitches.addView(gateRow);
+        TextView trialStatus=txt("HF08 exact UI check: "+P04ExactGateTrial.status()+
+            "; eligibility="+(P04ExactGateTrial.eligibleGate()<0 ? "NOT PROVEN":
+            P04ExactGateTrial.LABELS[P04ExactGateTrial.eligibleGate()])+". " +
+            "Reason: "+P04ExactGateTrial.reason()+". No fake media or social data.",11,false);
+        socialSwitches.addView(trialStatus);
         TextView p04Help=txt("Procedure: with the affected account, Start A, browse the same public " +
                 "Reel and feed post, then Stop. Switch accounts, Start B, repeat, Stop, Export. " +
                 "Count UI labels is optional; it checks exact words only and saves counts. " +
                 "Do not leave the wrong account capture active while switching. " +
+                "Only after A and B both produce 3+ consistent exact gate outcomes with Repost data " +
+                "present can you return to A, press Start A, then Try A UI gate. " +
+                "The trial expires after 30 seconds or 6 changed local results, whichever comes first. " +
+                "Stop or Trial OFF disarms it. If Instagram behaves oddly, restart it. " +
                 "HF03 records upstream Boolean outcomes in their original call order, only " +
                 "inside Repost selector 4. All Instagram results remain unchanged.",11,false);
         socialSwitches.addView(p04Help);

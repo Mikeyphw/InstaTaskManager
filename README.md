@@ -105,3 +105,19 @@ if PR #3 has no successful build at its current SHA.
 ### P04 HF06 — Start buttons repair
 
 Repairs the HF05 false NoSuchMethodException on IG455 abstract owner `X.0T4C` with a concrete `BdA(J)Z` method; optional upstream observers now fail independently of the two core A/B trace hooks. See `docs/P04_HF06_START_CONTROLS_REPAIR.md`.
+
+
+## P04 HF07 — Repost configuration factory trace
+
+HF06 qualified the capture UI on device. HF07 adds read-only, selector-4
+scoped counts of the concrete provider class returned by the exact IG455
+`X.01ym.A02` static configuration factory. It is an optional observer:
+A/B Start still works if unavailable. Output never contains account IDs,
+config keys, post data, or returned object content. See
+`docs/P04_HF07_FACTORY_DISPATCH.md`.
+
+## P04 HF08 — Why the previous trace was silent, and the guarded UI test
+
+After HF06's physical A/B captures, we revisited the **actual IG455 DEX** rather than assuming a receiver class or a single eligibility flag. The Repost selector-4 path requires both A0u and `X.0Ie0.A03` (native Repost data), and uses separate MobileConfig and nullable data-gate checks. The P04 HF07 configuration factory observer is included; HF08 adds caller-specific libxposed API102 `deoptimize` to address possible ART-inlined getter callbacks, exact-key aggregate A/B outcomes, A03 presence, and a default-OFF, bounded opt-in Repost **UI-only** Boolean trial if the same exact gate differs 3+/3+ times A/B.
+
+No account identities, media IDs, configuration keys or strings are exported. No friend-avatar presentation or backend repost-action permission is forced. The source and JVM tests do not imply an on-device fix; see `docs/P04_HF08_EXACT_BRANCH_DEOPT_GUARDED_UI_TRIAL.md` for exact DEX evidence, limitations, rollback and acceptance sequence.
